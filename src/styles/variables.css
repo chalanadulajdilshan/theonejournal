@@ -1,0 +1,64 @@
+/* Design System Tokens */
+:root {
+  /* Color Palette - Light Mode (Inspired by Khaleej Times crisp styling) */
+  --primary-color: #0b2240;      /* Deep Navy Blue */
+  --primary-rgb: 11, 34, 64;
+  --accent-color: #d12128;       /* Crimson Red */
+  --accent-rgb: 209, 33, 40;
+  --accent-gold: #c5a059;        /* Muted Gold */
+  
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8f9fa;
+  --bg-tertiary: #f1f3f5;
+  
+  --text-primary: #121212;
+  --text-secondary: #4a4a4a;
+  --text-muted: #7a7a7a;
+  
+  --border-color: #e2e8f0;
+  --border-light: #f1f5f9;
+  
+  /* Layout & Spacing */
+  --container-max-width: 1240px;
+  --header-height: 140px;
+  
+  /* Fonts */
+  --font-serif: 'Merriweather', Georgia, serif;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  
+  --header-text-color: var(--primary-color);
+  
+  /* Card and Shadows */
+  --card-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+  --card-shadow-hover: 0 8px 20px rgba(0, 0, 0, 0.08);
+  --border-radius: 4px;
+  
+  /* Transitions */
+  --transition-fast: 0.2s ease;
+  --transition-normal: 0.3s ease;
+}
+
+/* Dark Mode Theme Tokens */
+body.dark-mode {
+  --primary-color: #1a365d;
+  --primary-rgb: 26, 54, 93;
+  --accent-color: #ef4444;
+  --accent-rgb: 239, 68, 68;
+  --accent-gold: #d9b873;
+  
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-tertiary: #334155;
+  
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  
+  --header-text-color: #f5eedc;
+  
+  --border-color: #334155;
+  --border-light: #1e293b;
+  
+  --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  --card-shadow-hover: 0 10px 24px rgba(0, 0, 0, 0.4);
+}
