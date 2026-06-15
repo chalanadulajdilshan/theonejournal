@@ -7,7 +7,7 @@ export default function MainNavbar({ onSearchChange, searchVal }) {
 
   const categories = [
     {
-      name: 'SL',
+      name: 'UAE',
       subcategories: ['Transport', 'Crime', 'Education', 'Legal', 'Weather']
     },
     {
@@ -26,14 +26,7 @@ export default function MainNavbar({ onSearchChange, searchVal }) {
       name: 'Life',
       subcategories: ['Sports', 'Entertainment', 'Food', 'Travel', 'Beauty & Health', 'Fashion']
     },
-    {
-      name: 'Events',
-      subcategories: []
-    },
-    {
-      name: 'Subscription',
-      subcategories: ['Remote Jobs', 'Freelance Projects', 'Work From Home']
-    }
+
   ];
 
   const toggleSearch = () => {
@@ -59,26 +52,25 @@ export default function MainNavbar({ onSearchChange, searchVal }) {
     <div className="navbar-wrapper">
       <div className="container">
         <nav className="navbar-main">
-          {/* Logo on Left */}
-          <div className="navbar-logo-container">
-            <a href="/" className="logo-link">
-              <svg className="logo-icon-svg" viewBox="0 0 24 24">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
-              </svg>
-              <h1 className="logo-text">
-                SL <span>NEWS</span>
-              </h1>
-            </a>
-          </div>
+          {/* Mobile hamburger on left */}
+          <button 
+            onClick={() => setIsMobileDrawerOpen(true)} 
+            className="mobile-menu-btn hide-desktop"
+            aria-label="Open Menu"
+          >
+            <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
 
-          {/* Desktop Categories Menu */}
+          {/* Desktop Categories Menu - Centered */}
           <ul className="nav-menu hide-mobile">
             {categories.map((cat, idx) => (
               <li key={idx} className="nav-item">
                 <a href={`#section-${cat.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`} className="nav-link">
                   {cat.name}
                   {cat.subcategories.length > 0 && (
-                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" style={{marginLeft: '4px'}}>
+                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" style={{marginLeft: '3px'}}>
                       <path d="M6 9l6 6 6-6" />
                     </svg>
                   )}
@@ -97,7 +89,7 @@ export default function MainNavbar({ onSearchChange, searchVal }) {
             ))}
           </ul>
 
-          {/* Search Trigger and Mobile hamburger */}
+          {/* Search Trigger */}
           <div className="navbar-actions">
             <button 
               onClick={toggleSearch} 
@@ -106,26 +98,14 @@ export default function MainNavbar({ onSearchChange, searchVal }) {
               title="Search articles"
             >
               {isSearchOpen ? (
-                /* Close icon */
-                <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               ) : (
-                /* Search icon */
-                <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
               )}
-            </button>
-
-            <button 
-              onClick={() => setIsMobileDrawerOpen(true)} 
-              className="mobile-menu-btn hide-desktop"
-              aria-label="Open Menu"
-            >
-              <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
             </button>
           </div>
         </nav>
@@ -162,7 +142,7 @@ export default function MainNavbar({ onSearchChange, searchVal }) {
       )}
       <div className={`mobile-drawer ${isMobileDrawerOpen ? 'open' : ''}`}>
         <div className="drawer-header">
-          <h2 className="logo-text">SL <span>NEWS</span></h2>
+          <h2 className="drawer-brand-title">THE ONE <span>JOURNAL</span></h2>
           <button onClick={() => setIsMobileDrawerOpen(false)} className="drawer-close-btn" aria-label="Close Menu">
             <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />

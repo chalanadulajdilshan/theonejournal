@@ -29,6 +29,7 @@ try {
         is_sponsored BOOLEAN DEFAULT FALSE,
         media_type VARCHAR(50) DEFAULT NULL,
         duration VARCHAR(50) DEFAULT NULL,
+        last_clicked_at DATETIME DEFAULT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
     echo "Table 'articles' created or verified.\n";

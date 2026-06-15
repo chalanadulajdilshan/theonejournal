@@ -34,9 +34,7 @@ export default function WeatherRates() {
               </div>
             ))}
           </div>
-          <div className="rates-group">
-            <span className="bold text-accent">LATEST FEEDS</span>
-          </div>
+
         </div>
       </div>
     </div>

@@ -41,9 +41,9 @@ export default function Footer() {
         <div className="footer-top-row">
           {/* Brand info */}
           <div className="footer-brand">
-            <h2 className="logo-text" style={{color: '#fff'}}>SL <span>NEWS</span></h2>
+            <h2 className="logo-text" style={{color: '#fff'}}>UAE <span>NEWS</span></h2>
             <p className="footer-desc">
-              Inspired by the premium styling of Khaleej Times, SL News & Gossip is the leading source of breaking updates, deep business analysis, technology insights, and lifestyle features across the Gulf and globally.
+              Inspired by the premium styling of Khaleej Times, UAE News & Gossip is the leading source of breaking updates, deep business analysis, technology insights, and lifestyle features across the Gulf and globally.
             </p>
             <div className="footer-social-row">
               {socialLinks.map((social, idx) => (
@@ -106,7 +106,7 @@ export default function Footer() {
 
         {/* Footer Bottom */}
         <div className="footer-bottom-row">
-          <span>&copy; {new Date().getFullYear()} SL News & Gossip Portal. All rights reserved.</span>
+          <span>&copy; {new Date().getFullYear()} UAE News & Gossip Portal. All rights reserved.</span>
           <div style={{display: 'flex', gap: '1rem'}}>
             <a href="#">Back to Top</a>
             <span>&bull;</span>

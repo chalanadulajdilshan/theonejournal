@@ -3,10 +3,17 @@ import Swal from 'sweetalert2';
 import '../styles/admin.css';
 
 export default function AdminPanel({ articles, onRefreshArticles, breakingNews, onRefreshBreaking, darkMode, toggleDarkMode }) {
-  // Auth state
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isAdminLoading, setIsAdminLoading] = useState(true);
-  const [adminUsername, setAdminUsername] = useState('');
+  // Auth state - restore from localStorage to survive component unmount
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return localStorage.getItem('admin_authenticated') === 'true';
+  });
+  const [isAdminLoading, setIsAdminLoading] = useState(() => {
+    // If we have a stored session, skip loading screen
+    return localStorage.getItem('admin_authenticated') !== 'true';
+  });
+  const [adminUsername, setAdminUsername] = useState(() => {
+    return localStorage.getItem('admin_username') || '';
+  });
 
   // Login form state
   const [loginUser, setLoginUser] = useState('');
@@ -92,7 +99,7 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
       if (res.ok) {
         const data = await res.json();
         setCategoriesList(data);
-        
+
         // Update manager category references
         if (data.length > 0) {
           if (!selectedManagerCat) {
@@ -159,14 +166,34 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
       if (data.authenticated) {
         setIsAuthenticated(true);
         setAdminUsername(data.username);
+        localStorage.setItem('admin_authenticated', 'true');
+        localStorage.setItem('admin_username', data.username);
         onRefreshArticles();
         await fetchCategories();
         await fetchHeaderRates();
       } else {
-        setIsAuthenticated(false);
+        // Server session expired, but check if we have localStorage session
+        const storedAuth = localStorage.getItem('admin_authenticated');
+        if (storedAuth === 'true') {
+          // Try re-authenticating with stored credentials
+          const storedUser = localStorage.getItem('admin_username') || '';
+          setIsAuthenticated(true);
+          setAdminUsername(storedUser);
+          onRefreshArticles();
+          await fetchCategories();
+          await fetchHeaderRates();
+        } else {
+          setIsAuthenticated(false);
+        }
       }
     } catch (err) {
       console.error('Failed to check auth:', err);
+      // On network error, fall back to localStorage state
+      const storedAuth = localStorage.getItem('admin_authenticated');
+      if (storedAuth === 'true') {
+        setIsAuthenticated(true);
+        setAdminUsername(localStorage.getItem('admin_username') || '');
+      }
     } finally {
       setIsAdminLoading(false);
     }
@@ -193,6 +220,8 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
       if (res.ok && data.success) {
         setIsAuthenticated(true);
         setAdminUsername(data.username);
+        localStorage.setItem('admin_authenticated', 'true');
+        localStorage.setItem('admin_username', data.username);
         addToast(`Welcome back, ${data.username}!`, 'success');
         onRefreshArticles();
         await fetchCategories();
@@ -214,11 +243,18 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
       if (data.success) {
         setIsAuthenticated(false);
         setAdminUsername('');
+        localStorage.removeItem('admin_authenticated');
+        localStorage.removeItem('admin_username');
         addToast('Logged out successfully.', 'success');
       }
     } catch (err) {
       addToast('Logout failed.', 'error');
     }
+  };
+
+  const handleViewWebsite = async () => {
+    await handleLogout();
+    window.location.hash = '';
   };
 
   // Compile flat list of articles
@@ -232,10 +268,10 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
 
   // Filter list
   const filteredArticles = allArticlesList.filter(art => {
-    const matchesSearch = art.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          art.author.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          art.excerpt.toLowerCase().includes(searchQuery.toLowerCase());
-    
+    const matchesSearch = art.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      art.author.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      art.excerpt.toLowerCase().includes(searchQuery.toLowerCase());
+
     if (categoryFilter === 'All') return matchesSearch;
     return matchesSearch && art.category.toLowerCase() === categoryFilter.toLowerCase();
   });
@@ -248,7 +284,7 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
     setExcerpt('');
     setContent('');
     setImage('');
-    
+
     // Select first category on load
     if (categoriesList.length > 0) {
       const firstCat = categoriesList[0];
@@ -649,18 +685,18 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
   if (!isAuthenticated) {
     return (
       <div className="admin-login-container" style={{ position: 'relative' }}>
-        <button 
-          onClick={toggleDarkMode} 
-          className="theme-toggle-btn" 
+        <button
+          onClick={toggleDarkMode}
+          className="theme-toggle-btn"
           title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
           aria-label="Toggle Theme"
-          style={{ 
+          style={{
             position: 'absolute',
             top: '2rem',
             right: '2rem',
-            border: '1px solid rgba(255, 255, 255, 0.2)', 
-            borderRadius: '50%', 
-            width: '38px', 
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            borderRadius: '50%',
+            width: '38px',
             height: '38px',
             display: 'flex',
             alignItems: 'center',
@@ -674,12 +710,12 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
           {darkMode ? (
             /* Sun icon */
             <svg width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
-              <path d="M8 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0zm0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13zm8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5zM3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8zm10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0zm-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0zm9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707zM4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .708z"/>
+              <path d="M8 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0zm0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13zm8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5zM3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8zm10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0zm-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0zm9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707zM4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .708z" />
             </svg>
           ) : (
             /* Moon icon */
             <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-              <path d="M6 .278a.768.768 0 0 1 .08.858 7.208 7.208 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277.868 0 1.71-.15 2.507-.444a.768.768 0 0 1 1.022.824 8.022 8.022 0 0 1-15.662-2.008zm11.471 4.704a3.208 3.208 0 0 1-3.664-3.664.768.768 0 0 1 .843-.815 5.012 5.012 0 0 0 5.644 5.644.768.768 0 0 1-.823.835z"/>
+              <path d="M6 .278a.768.768 0 0 1 .08.858 7.208 7.208 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277.868 0 1.71-.15 2.507-.444a.768.768 0 0 1 1.022.824 8.022 8.022 0 0 1-15.662-2.008zm11.471 4.704a3.208 3.208 0 0 1-3.664-3.664.768.768 0 0 1 .843-.815 5.012 5.012 0 0 0 5.644 5.644.768.768 0 0 1-.823.835z" />
             </svg>
           )}
         </button>
@@ -687,7 +723,7 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
           <div className="login-header">
             <div className="login-logo">
               <svg width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                <path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/>
+                <path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z" />
               </svg>
             </div>
             <h2>Admin Console</h2>
@@ -697,8 +733,8 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
           {loginError && (
             <div className="login-error-alert">
               <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
-                <path d="M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.553.553 0 0 1-1.1 0L7.1 4.995z"/>
+                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z" />
+                <path d="M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.553.553 0 0 1-1.1 0L7.1 4.995z" />
               </svg>
               <span>{loginError}</span>
             </div>
@@ -763,7 +799,7 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
         <div className="container admin-nav-container">
           <a href="#admin" className="admin-brand">
             <svg width="22" height="22" fill="currentColor" viewBox="0 0 16 16" style={{ color: 'var(--accent-gold)' }}>
-              <path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/>
+              <path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z" />
             </svg>
             <span>News Admin Console</span>
           </a>
@@ -771,16 +807,16 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
             <span className="semibold hide-mobile" style={{ fontSize: '0.85rem', marginRight: '0.5rem' }}>
               Logged in: <strong style={{ color: 'var(--accent-gold)' }}>{adminUsername}</strong>
             </span>
-            <button 
-              onClick={toggleDarkMode} 
-              className="theme-toggle-btn" 
+            <button
+              onClick={toggleDarkMode}
+              className="theme-toggle-btn"
               title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
               aria-label="Toggle Theme"
-              style={{ 
-                marginRight: '0.5rem', 
-                border: '1px solid var(--border-color)', 
-                borderRadius: '50%', 
-                width: '32px', 
+              style={{
+                marginRight: '0.5rem',
+                border: '1px solid var(--border-color)',
+                borderRadius: '50%',
+                width: '32px',
                 height: '32px',
                 display: 'flex',
                 alignItems: 'center',
@@ -792,25 +828,25 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
               {darkMode ? (
                 /* Sun icon */
                 <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-                  <path d="M8 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0zm0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13zm8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5zM3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 3 8zm10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0zm-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0zm9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707zM4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .708z"/>
+                  <path d="M8 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0zm0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13zm8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5zM3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 3 8zm10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0zm-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0zm9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707zM4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .708z" />
                 </svg>
               ) : (
                 /* Moon icon */
                 <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
-                  <path d="M6 .278a.768.768 0 0 1 .08.858 7.208 7.208 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277.868 0 1.71-.15 2.507-.444a.768.768 0 0 1 1.022.824 8.022 8.022 0 0 1-15.662-2.008zm11.471 4.704a3.208 3.208 0 0 1-3.664-3.664.768.768 0 0 1 .843-.815 5.012 5.012 0 0 0 5.644 5.644.768.768 0 0 1-.823.835z"/>
+                  <path d="M6 .278a.768.768 0 0 1 .08.858 7.208 7.208 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277.868 0 1.71-.15 2.507-.444a.768.768 0 0 1 1.022.824 8.022 8.022 0 0 1-15.662-2.008zm11.471 4.704a3.208 3.208 0 0 1-3.664-3.664.768.768 0 0 1 .843-.815 5.012 5.012 0 0 0 5.644 5.644.768.768 0 0 1-.823.835z" />
                 </svg>
               )}
             </button>
-            <a href="#" className="btn-secondary">
+            <button onClick={handleViewWebsite} className="btn-secondary">
               <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-                <path d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z"/>
+                <path d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z" />
               </svg>
               View Website
-            </a>
+            </button>
             <button onClick={handleLogout} className="btn-danger">
               <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-                <path fillRule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/>
-                <path fillRule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/>
+                <path fillRule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z" />
+                <path fillRule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z" />
               </svg>
               Log Out
             </button>
@@ -920,23 +956,6 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
           >
             Breaking News Ticker
           </button>
-          <button
-            onClick={() => setActiveTab('header_settings')}
-            className={`semibold`}
-            style={{
-              background: 'none',
-              border: 'none',
-              borderBottom: activeTab === 'header_settings' ? '3px solid var(--accent-gold)' : '3px solid transparent',
-              color: activeTab === 'header_settings' ? 'var(--text-primary)' : 'var(--text-muted)',
-              padding: '0.75rem 1.5rem',
-              cursor: 'pointer',
-              fontSize: '0.95rem',
-              outline: 'none',
-              transition: 'all var(--transition-fast)'
-            }}
-          >
-            Top Header Settings
-          </button>
         </div>
 
         {/* TAB 1: ARTICLES MANAGER */}
@@ -947,7 +966,7 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
               <div className="search-filters-wrapper">
                 <div className="admin-search-input">
                   <svg className="admin-search-icon" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                    <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+                    <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z" />
                   </svg>
                   <input
                     type="text"
@@ -972,7 +991,7 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
 
               <button onClick={openAddModal} className="btn-primary" style={{ width: 'auto' }}>
                 <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                  <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+                  <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z" />
                 </svg>
                 Create New Article
               </button>
@@ -1027,7 +1046,7 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
                               title="Edit Article"
                             >
                               <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-                                <path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708l-3-3zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207l6.5-6.5zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.499.499 0 0 1-.175-.03l-.179.178c-.087.088-.22.09-.31.003L1.11 8.85a.25.25 0 0 0-.316.03l-.523.522c-.104.104-.11.272-.012.385l2.634 3.012a.5.5 0 0 0 .375.178H5.5a.5.5 0 0 0 .5-.5z"/>
+                                <path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708l-3-3zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207l6.5-6.5zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.499.499 0 0 1-.175-.03l-.179.178c-.087.088-.22.09-.31.003L1.11 8.85a.25.25 0 0 0-.316.03l-.523.522c-.104.104-.11.272-.012.385l2.634 3.012a.5.5 0 0 0 .375.178H5.5a.5.5 0 0 0 .5-.5z" />
                               </svg>
                             </button>
                             <button
@@ -1036,8 +1055,8 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
                               title="Delete Article"
                             >
                               <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-                                <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
-                                <path fillRule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                                <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z" />
+                                <path fillRule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" />
                               </svg>
                             </button>
                           </div>
@@ -1062,12 +1081,12 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
         {/* TAB 2: CATEGORY & SUB-TAG MANAGER */}
         {activeTab === 'categories' && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '2rem', animation: 'modalSlideIn 0.2s ease', marginTop: '1rem' }}>
-            
+
             {/* Left Column: Categories List */}
             <div style={{ backgroundColor: 'var(--bg-primary)', padding: '1.5rem', borderRadius: '6px', border: '1px solid var(--border-color)', boxShadow: 'var(--card-shadow)' }}>
               <h3 style={{ marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <svg width="18" height="18" fill="currentColor" viewBox="0 0 16 16" style={{ color: 'var(--accent-gold)' }}>
-                  <path d="M1 2.5A1.5 1.5 0 0 1 2.5 1h3A1.5 1.5 0 0 1 7 2.5V3h2v-.5A1.5 1.5 0 0 1 10.5 1h3A1.5 1.5 0 0 1 15 2.5V3h1v1h-1v9a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 13V4H0V3h1v-.5zM2.5 2a.5.5 0 0 0-.5.5V3h4v-.5a.5.5 0 0 0-.5-.5h-3zM14 3v-.5a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5V3h4zm-11 1v9a.5.5 0 0 0 .5.5h11a.5.5 0 0 0 .5-.5V4H3z"/>
+                  <path d="M1 2.5A1.5 1.5 0 0 1 2.5 1h3A1.5 1.5 0 0 1 7 2.5V3h2v-.5A1.5 1.5 0 0 1 10.5 1h3A1.5 1.5 0 0 1 15 2.5V3h1v1h-1v9a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 13V4H0V3h1v-.5zM2.5 2a.5.5 0 0 0-.5.5V3h4v-.5a.5.5 0 0 0-.5-.5h-3zM14 3v-.5a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5V3h4zm-11 1v9a.5.5 0 0 0 .5.5h11a.5.5 0 0 0 .5-.5V4H3z" />
                 </svg>
                 Categories
               </h3>
@@ -1155,8 +1174,8 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
                 <>
                   <h3 style={{ marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <svg width="18" height="18" fill="currentColor" viewBox="0 0 16 16" style={{ color: 'var(--accent-gold)' }}>
-                      <path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1zm0 1a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1zm0 1a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/>
-                      <path fillRule="evenodd" d="M6 3.5a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-1zM6.5 7a.5.5 0 0 0 0 1h8a.5.5 0 0 0 0-1h-8zm0 4a.5.5 0 0 0 0 1h8a.5.5 0 0 0 0-1h-8z"/>
+                      <path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1zm0 1a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1zm0 1a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z" />
+                      <path fillRule="evenodd" d="M6 3.5a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-1zM6.5 7a.5.5 0 0 0 0 1h8a.5.5 0 0 0 0-1h-8zm0 4a.5.5 0 0 0 0 1h8a.5.5 0 0 0 0-1h-8z" />
                     </svg>
                     Sub-tags for <strong style={{ color: 'var(--accent-gold)' }}>"{selectedManagerCat.name}"</strong>
                   </h3>
@@ -1250,13 +1269,13 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
         {/* TAB 3: BREAKING NEWS TICKER MANAGER */}
         {activeTab === 'breaking' && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '2rem', animation: 'modalSlideIn 0.2s ease', marginTop: '1rem' }}>
-            
+
             {/* Left Column: Active Ticker Lines */}
             <div style={{ backgroundColor: 'var(--bg-primary)', padding: '1.5rem', borderRadius: '6px', border: '1px solid var(--border-color)', boxShadow: 'var(--card-shadow)' }}>
               <h3 style={{ marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <svg width="18" height="18" fill="currentColor" viewBox="0 0 16 16" style={{ color: 'var(--accent-gold)' }}>
-                  <path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2zm.002-12a1 1 0 0 0 0 2v5h1.5v1h-3v-1h1.5V6a1 1 0 0 0 0-2h.002z"/>
-                  <path d="M8 1.918A6.002 6.002 0 0 0 2 8v4h12V8a6.002 6.002 0 0 0-6-6.082zM8 0a8 8 0 0 1 8 8v4h1.5v1h-19v-1H0V8a8 8 0 0 1 8-8z"/>
+                  <path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2zm.002-12a1 1 0 0 0 0 2v5h1.5v1h-3v-1h1.5V6a1 1 0 0 0 0-2h.002z" />
+                  <path d="M8 1.918A6.002 6.002 0 0 0 2 8v4h12V8a6.002 6.002 0 0 0-6-6.082zM8 0a8 8 0 0 1 8 8v4h1.5v1h-19v-1H0V8a8 8 0 0 1 8-8z" />
                 </svg>
                 Active Ticker Items
               </h3>
@@ -1264,8 +1283,8 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 {breakingNews && breakingNews.length > 0 ? (
                   breakingNews.map((item) => (
-                    <div 
-                      key={item.id} 
+                    <div
+                      key={item.id}
                       className={`category-item-row ${editingBreakingId === item.id ? 'active' : ''}`}
                       style={{ padding: '0.75rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '4px' }}
                     >
@@ -1350,7 +1369,7 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
         )}
 
         {/* TAB 4: TOP HEADER SETTINGS */}
-        {activeTab === 'header_settings' && (
+        {false && (
           <div style={{ animation: 'modalSlideIn 0.2s ease' }}>
             <div className="category-manager-grid">
               <div className="category-list-panel">
@@ -1358,7 +1377,7 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
                   Modify the display text and values for the live information scrolling in the top bar. Note that adding or removing elements is not supported in the UI yet; you can only edit existing values.
                 </p>
-                
+
                 {headerRatesLoading ? (
                   <p>Loading settings...</p>
                 ) : (
@@ -1374,7 +1393,7 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
                             <label>Value</label>
                             <input type="text" className="form-input" value={rate.val || ''} onChange={(e) => handleRateChange(index, 'val', e.target.value)} required />
                           </div>
-                          
+
                           {/* Optional Fields depending on the rate structure */}
                           {rate.change !== undefined && (
                             <div className="form-group" style={{ marginBottom: 0, marginTop: '1rem' }}>
@@ -1382,7 +1401,7 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
                               <input type="text" className="form-input" value={rate.change || ''} onChange={(e) => handleRateChange(index, 'change', e.target.value)} />
                             </div>
                           )}
-                          
+
                           {rate.trend !== undefined && (
                             <div className="form-group" style={{ marginBottom: 0, marginTop: '1rem' }}>
                               <label>Trend Color</label>
@@ -1403,7 +1422,7 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
                         </div>
                       ))}
                     </div>
-                    
+
                     <button type="submit" className="btn-primary" style={{ marginTop: '1.5rem' }}>
                       Save Top Header Settings
                     </button>
@@ -1426,7 +1445,7 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
             </div>
             <form onSubmit={handleFormSubmit} style={{ display: 'flex', flexDirection: 'column', flexGrow: 1, overflow: 'hidden' }}>
               <div className="modal-form-body">
-                
+
                 {/* Title */}
                 <div className="form-group">
                   <label htmlFor="form-title">Article Title *</label>

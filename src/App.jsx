@@ -7,7 +7,6 @@ import './App.css'; // Will be cleared to prevent conflicts
 import TopHeader from './components/TopHeader';
 import MainNavbar from './components/MainNavbar';
 import NewsTicker from './components/NewsTicker';
-import WeatherRates from './components/WeatherRates';
 import SectionHeader from './components/SectionHeader';
 import FeaturedCard from './components/FeaturedCard';
 import ArticleCard from './components/ArticleCard';
@@ -79,6 +78,22 @@ export default function App() {
       console.error('Failed to fetch articles:', err);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleArticleClick = async (article) => {
+    setSelectedArticle(article);
+    if (article && article.id) {
+      try {
+        await fetch('/api/click_article.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: article.id })
+        });
+        fetchArticles();
+      } catch (err) {
+        console.error('Failed to log article click:', err);
+      }
     }
   };
 
@@ -170,11 +185,8 @@ export default function App() {
       {/* Breaking News Ticker */}
       <NewsTicker 
         tickerItems={breakingNews} 
-        onArticleClick={setSelectedArticle} 
+        onArticleClick={handleArticleClick} 
       />
-
-      {/* Weather & Market rates */}
-      <WeatherRates />
 
       <main className="container" style={{ minHeight: '60vh', marginTop: '1.5rem' }}>
         {searchQuery ? (
@@ -187,7 +199,7 @@ export default function App() {
                   <ArticleCard 
                     key={article.id} 
                     article={article} 
-                    onClick={setSelectedArticle} 
+                    onClick={handleArticleClick} 
                   />
                 ))}
               </div>
@@ -212,19 +224,19 @@ export default function App() {
           /* Main Homepage Sections Layout */
           <div className="main-layout">
             
-            {/* SECTION 1: Partner Content (SL) */}
-            <section className="home-section" id="section-sl">
-              <SectionHeader title="Partner Content (SL)" id="partner-content" />
+            {/* SECTION 1: Partner Content (UAE) */}
+            <section className="home-section" id="section-uae">
+              <SectionHeader title="Partner Content (UAE)" id="partner-content" />
               {(() => {
                 const { featured, gridItems } = getStorySplit(articles.partnerContent);
                 return (
                   <div className="grid-5-stories">
                     <div className="featured-column">
-                      <FeaturedCard article={featured} onClick={setSelectedArticle} />
+                      <FeaturedCard article={featured} onClick={handleArticleClick} />
                     </div>
                     <div className="grid-column-2x2">
                       {gridItems.map((art) => (
-                        <ArticleCard key={art.id} article={art} onClick={setSelectedArticle} />
+                        <ArticleCard key={art.id} article={art} onClick={handleArticleClick} />
                       ))}
                     </div>
                   </div>
@@ -237,7 +249,7 @@ export default function App() {
               <SectionHeader title="Videos & Podcasts" id="videos-podcasts" />
               <MediaSection 
                 articles={articles.videosAndPodcasts || []} 
-                onArticleClick={setSelectedArticle} 
+                onArticleClick={handleArticleClick} 
               />
             </section>
 
@@ -249,11 +261,11 @@ export default function App() {
                 return (
                   <div className="grid-you-may-like">
                     <div className="featured-column">
-                      <FeaturedCard article={featured} onClick={setSelectedArticle} />
+                      <FeaturedCard article={featured} onClick={handleArticleClick} />
                     </div>
                     <div className="trending-list-column">
                       {gridItems.map((art, idx) => (
-                        <div key={art.id} className="trending-list-card" onClick={() => setSelectedArticle(art)}>
+                        <div key={art.id} className="trending-list-card" onClick={() => handleArticleClick(art)}>
                           <span className="trending-number">0{idx + 2}</span>
                           <div className="trending-card-content">
                             <h4 className="trending-headline">{art.title}</h4>
@@ -277,11 +289,11 @@ export default function App() {
                 return (
                   <div className="grid-5-stories">
                     <div className="featured-column">
-                      <FeaturedCard article={featured} onClick={setSelectedArticle} />
+                      <FeaturedCard article={featured} onClick={handleArticleClick} />
                     </div>
                     <div className="grid-column-2x2">
                       {gridItems.map((art) => (
-                        <ArticleCard key={art.id} article={art} onClick={setSelectedArticle} />
+                        <ArticleCard key={art.id} article={art} onClick={handleArticleClick} />
                       ))}
                     </div>
                   </div>
@@ -297,11 +309,11 @@ export default function App() {
                 return (
                   <div className="grid-5-stories">
                     <div className="featured-column">
-                      <FeaturedCard article={featured} onClick={setSelectedArticle} />
+                      <FeaturedCard article={featured} onClick={handleArticleClick} />
                     </div>
                     <div className="grid-column-2x2">
                       {gridItems.map((art) => (
-                        <ArticleCard key={art.id} article={art} onClick={setSelectedArticle} />
+                        <ArticleCard key={art.id} article={art} onClick={handleArticleClick} />
                       ))}
                     </div>
                   </div>
@@ -317,11 +329,11 @@ export default function App() {
                 return (
                   <div className="grid-5-stories">
                     <div className="featured-column">
-                      <FeaturedCard article={featured} onClick={setSelectedArticle} />
+                      <FeaturedCard article={featured} onClick={handleArticleClick} />
                     </div>
                     <div className="grid-column-2x2">
                       {gridItems.map((art) => (
-                        <ArticleCard key={art.id} article={art} onClick={setSelectedArticle} />
+                        <ArticleCard key={art.id} article={art} onClick={handleArticleClick} />
                       ))}
                     </div>
                   </div>
@@ -337,11 +349,11 @@ export default function App() {
                 return (
                   <div className="grid-5-stories">
                     <div className="featured-column">
-                      <FeaturedCard article={featured} onClick={setSelectedArticle} />
+                      <FeaturedCard article={featured} onClick={handleArticleClick} />
                     </div>
                     <div className="grid-column-2x2">
                       {gridItems.map((art) => (
-                        <ArticleCard key={art.id} article={art} onClick={setSelectedArticle} />
+                        <ArticleCard key={art.id} article={art} onClick={handleArticleClick} />
                       ))}
                     </div>
                   </div>

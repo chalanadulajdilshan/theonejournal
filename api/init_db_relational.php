@@ -66,6 +66,8 @@ try {
         is_sponsored BOOLEAN DEFAULT FALSE,
         media_type VARCHAR(50) DEFAULT NULL,
         duration VARCHAR(50) DEFAULT NULL,
+        last_clicked_at DATETIME DEFAULT NULL,
+        views_count INT DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (category_id) REFERENCES categories(id),
         FOREIGN KEY (subcategory_id) REFERENCES subcategories(id)
