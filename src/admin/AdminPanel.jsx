@@ -3,6 +3,57 @@ import Swal from 'sweetalert2';
 import './admin.css';
 import ImageUploadField from './ImageUploadField';
 
+// --- YouTube helpers: derive the thumbnail + auto-calculate MM:SS length ---
+const getYouTubeId = (url) => {
+  if (!url) return null;
+  const m = url.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/);
+  return (m && m[2] && m[2].length === 11) ? m[2] : null;
+};
+
+const formatMMSS = (totalSeconds) => {
+  const s = Math.max(0, Math.round(totalSeconds));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+};
+
+let ytApiPromise = null;
+const ensureYouTubeApi = () => {
+  if (window.YT && window.YT.Player) return Promise.resolve();
+  if (ytApiPromise) return ytApiPromise;
+  ytApiPromise = new Promise((resolve) => {
+    const prev = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = () => { if (typeof prev === 'function') prev(); resolve(); };
+    if (!document.querySelector('script[src*="youtube.com/iframe_api"]')) {
+      const s = document.createElement('script');
+      s.src = 'https://www.youtube.com/iframe_api';
+      document.body.appendChild(s);
+    }
+  });
+  return ytApiPromise;
+};
+
+// Loads the video off-screen and reads its duration (no API key needed)
+const fetchYouTubeDuration = (videoId) => ensureYouTubeApi().then(() => new Promise((resolve, reject) => {
+  const holder = document.createElement('div');
+  holder.style.cssText = 'position:fixed;left:-10000px;top:0;width:1px;height:1px;';
+  document.body.appendChild(holder);
+  let done = false;
+  const finish = (fn, val, player) => {
+    if (done) return;
+    done = true;
+    try { player && player.destroy(); } catch (e) { /* ignore */ }
+    holder.remove();
+    fn(val);
+  };
+  const player = new window.YT.Player(holder, {
+    videoId,
+    events: {
+      onReady: (e) => finish(resolve, e.target.getDuration(), e.target),
+      onError: () => finish(reject, new Error('yt error'), player),
+    },
+  });
+  setTimeout(() => finish(reject, new Error('timeout'), player), 8000);
+}));
+
 // Password input with a built-in show/hide (eye) toggle.
 function PasswordInput({ value, onChange, placeholder, autoComplete, required }) {
   const [show, setShow] = useState(false);
@@ -625,10 +676,25 @@ By using The One Journal, you acknowledge that you have read and agreed to these
   };
 
   // Handle Form Submit
+  // When a YouTube link is pasted: use its thumbnail as the image and
+  // auto-calculate the exact MM:SS length.
+  const handleMediaUrlChange = (url) => {
+    setMediaUrl(url);
+    const id = getYouTubeId(url);
+    if (!id) return;
+    setImage(`https://img.youtube.com/vi/${id}/hqdefault.jpg`);
+    fetchYouTubeDuration(id)
+      .then((secs) => { if (secs > 0) setDuration(formatMMSS(secs)); })
+      .catch(() => {});
+  };
+
   const handleFormSubmit = async (e) => {
     e.preventDefault();
 
-    if (!title || !excerpt || !content || !image || !categoryId || !subcategoryId || !author) {
+    // For Videos & Podcasts the image comes from the YouTube thumbnail, so it
+    // isn't required manually.
+    const isVideoCat = category.toLowerCase() === 'videos & podcasts';
+    if (!title || !excerpt || !content || (!image && !isVideoCat) || !categoryId || !subcategoryId || !author) {
       addToast('Please fill out all required fields.', 'error');
       return;
     }
@@ -3068,14 +3134,16 @@ By using The One Journal, you acknowledge that you have read and agreed to these
                   </div>
                 </div>
 
-                {/* Article image (upload or URL) */}
-                <div className="form-group">
-                  <label>Article Image *</label>
-                  <ImageUploadField value={image} onChange={setImage} onToast={addToast} required />
-                  <small style={{ color: 'var(--text-muted)', display: 'block', marginTop: '0.25rem' }}>
-                    Upload a JPG, PNG, GIF or WEBP (max 5 MB), or paste an image URL.
-                  </small>
-                </div>
+                {/* Article image — hidden for Videos & Podcasts (uses the YouTube thumbnail) */}
+                {category.toLowerCase() !== 'videos & podcasts' && (
+                  <div className="form-group">
+                    <label>Article Image *</label>
+                    <ImageUploadField value={image} onChange={setImage} onToast={addToast} required />
+                    <small style={{ color: 'var(--text-muted)', display: 'block', marginTop: '0.25rem' }}>
+                      Upload a JPG, PNG, GIF or WEBP (max 5 MB), or paste an image URL.
+                    </small>
+                  </div>
+                )}
 
                 {/* Conditional fields for Videos & Podcasts */}
                 {category.toLowerCase() === 'videos & podcasts' && (
@@ -3110,17 +3178,17 @@ By using The One Journal, you acknowledge that you have read and agreed to these
                     </div>
 
                     <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label htmlFor="form-mediaurl">YouTube Link / Video URL (Optional)</label>
+                      <label htmlFor="form-mediaurl">YouTube Link / Video URL</label>
                       <input
                         id="form-mediaurl"
                         type="url"
                         className="form-input"
                         value={mediaUrl}
-                        onChange={(e) => setMediaUrl(e.target.value)}
+                        onChange={(e) => handleMediaUrlChange(e.target.value)}
                         placeholder="e.g. https://www.youtube.com/watch?v=dQw4w9WgXcQ"
                       />
                       <small style={{ color: 'var(--text-muted)', display: 'block', marginTop: '0.25rem' }}>
-                        If provided, users can watch/listen to the video or podcast directly on the website.
+                        Paste a YouTube link — the thumbnail becomes the image and the exact length (MM:SS) is filled automatically.
                       </small>
                     </div>
                   </div>

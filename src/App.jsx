@@ -105,19 +105,21 @@ export default function App() {
     }
   };
 
-  // Format a live update timestamp as date + hours:minutes
-  // e.g. "Jun 18, 2026, 7:34 PM"
+  // Relative time for live updates, e.g. "1d 5h 30m ago"
   const liveTimeAgo = (dateStr) => {
     if (!dateStr) return '';
     const d = new Date(dateStr);
     if (isNaN(d.getTime())) return '';
-    return d.toLocaleString('en-US', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    let diff = Math.floor((Date.now() - d.getTime()) / 1000);
+    if (diff < 60) return 'Just now';
+    const days = Math.floor(diff / 86400); diff %= 86400;
+    const hours = Math.floor(diff / 3600); diff %= 3600;
+    const mins = Math.floor(diff / 60);
+    const parts = [];
+    if (days) parts.push(days + 'd');
+    if (hours) parts.push(hours + 'h');
+    if (mins) parts.push(mins + 'm');
+    return parts.join(' ') + ' ago';
   };
 
   // Handle dark mode side-effect
@@ -291,14 +293,15 @@ export default function App() {
   const articlesForCategory = (cat) => flatArticles.filter(a => a.categoryId === cat.id);
 
   // Categories that get their own homepage "story" section. The special ones
-  // (You May Like, Partner Content, Videos & Podcasts) have dedicated sections.
-  // Only categories ticked "visible" in the admin appear on the website
+  // The visibility tick only controls the navbar (header) & footer.
   const visibleCategories = categories.filter(c => c.is_visible !== 0);
 
   // "You May Like" is the auto-generated hero feed shown at the top, so it is
-  // excluded from both the navbar and the ordered homepage body sections.
-  // Everything else renders in the admin drag order (sort_order).
+  // excluded from the navbar and the ordered homepage body sections.
+  // Header/footer respect the visibility tick…
   const navCategories = visibleCategories.filter(c => c.slug !== 'you-may-like');
+  // …but the homepage body always shows every category (in admin drag order).
+  const bodyCategories = categories.filter(c => c.slug !== 'you-may-like');
 
   // Prepare layout props for page components
   const layoutProps = {
@@ -365,27 +368,35 @@ export default function App() {
       const id = currentHash.replace('#article-', '');
       art = flatArticles.find(a => String(a.id) === id);
     }
-    return <ArticlePage layoutProps={layoutProps} article={art} />;
+    return <ArticlePage layoutProps={{ ...layoutProps, activeCategory: art?.category }} article={art} />;
   }
 
-  // Dynamic category page: any #category-<slug> is resolved against the
-  // admin-managed categories and its articles are filtered from the feed.
+  // Dynamic category page: #category-<slug> shows a category; an optional
+  // "--<subslug>" suffix narrows it to a single sub-tag (e.g. #category-international--logistics).
   if (currentHash.startsWith('#category-')) {
-    const slug = currentHash.replace('#category-', '');
-    // Aliases keep older homepage "View All" links working
+    const raw = currentHash.replace('#category-', '');
+    const [catSlug, subSlug] = raw.split('--');
+    // Aliases keep older short "View All" slugs working (real categories win)
     const aliasMap = {
       videos: 'videos-podcasts',
-      partner: 'partner-content',
-      international: 'you-may-like',
-      uae: 'you-may-like'
+      partner: 'partner-content'
     };
-    const realSlug = aliasMap[slug] || slug;
-    const cat = categories.find(c => c.slug === realSlug);
-    const list = cat ? articlesForCategory(cat) : [];
+    const cat = categories.find(c => c.slug === (aliasMap[catSlug] || catSlug));
+    let list = cat ? articlesForCategory(cat) : [];
+    let title = cat ? cat.name : 'Category';
+
+    if (subSlug && cat) {
+      const sub = (cat.subcategories || []).find(s => s.slug === subSlug);
+      if (sub) {
+        list = list.filter(a => a.subcategoryId === sub.id || (a.tag || '').toLowerCase() === sub.name.toLowerCase());
+        title = `${cat.name} — ${sub.name}`;
+      }
+    }
+
     return (
       <CategoryPage
-        layoutProps={layoutProps}
-        title={cat ? cat.name : 'Category'}
+        layoutProps={{ ...layoutProps, activeCategory: cat ? cat.name : null }}
+        title={title}
         articlesList={list}
         onArticleClick={handleArticleClick}
       />
@@ -525,9 +536,9 @@ export default function App() {
               </div>
             </div>
 
-            {/* All category sections render in the admin drag order, so
-                rearranging categories rearranges the whole homepage body. */}
-            {navCategories.map((cat) => {
+            {/* The body always shows every category (visibility only affects
+                the header/footer); rendered in the admin drag order. */}
+            {bodyCategories.map((cat) => {
               const list = articlesForCategory(cat);
               if (list.length === 0) return null;
 

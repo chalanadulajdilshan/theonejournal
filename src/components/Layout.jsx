@@ -23,7 +23,8 @@ export default function Layout({
   tickerItems,
   onArticleClick,
   siteViews,
-  categories
+  categories,
+  activeCategory
 }) {
   return (
     <div className="layout-wrapper">
@@ -36,7 +37,7 @@ export default function Layout({
       )}
 
       {/* 3. Main Navigation Bar */}
-      <MainNavbar searchVal={searchVal} onSearchChange={onSearchChange} categories={categories} />
+      <MainNavbar searchVal={searchVal} onSearchChange={onSearchChange} categories={categories} activeCategory={activeCategory} />
 
       {/* 4. Main Page Content (Injected dynamically) */}
       <div className="main-content-wrapper">

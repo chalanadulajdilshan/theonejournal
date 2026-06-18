@@ -22,7 +22,7 @@ const JOBS_ITEM = {
   subcategories: [],
 };
 
-export default function MainNavbar({ onSearchChange, searchVal, categories: backendCategories }) {
+export default function MainNavbar({ onSearchChange, searchVal, categories: backendCategories, activeCategory }) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [activeMobileSub, setActiveMobileSub] = useState(null);
@@ -32,11 +32,12 @@ export default function MainNavbar({ onSearchChange, searchVal, categories: back
   const categories = [
     ...(backendCategories || []).map((cat) => ({
       name: cat.name,
-      // Top-level item scrolls to that category's section on the homepage
-      hash: `#section-${cat.slug}`,
+      // Top-level item opens the full category page (all its news)
+      hash: `#category-${cat.slug}`,
       subcategories: (cat.subcategories || []).map((sub) => ({
         name: sub.name,
-        hash: `#category-${cat.slug}`,
+        // Sub-tag link filters the category page to just this sub-tag
+        hash: `#category-${cat.slug}--${sub.slug}`,
       })),
     })),
     JOBS_ITEM,
@@ -97,7 +98,7 @@ export default function MainNavbar({ onSearchChange, searchVal, categories: back
           {/* Desktop Categories Menu - Centered */}
           <ul className="nav-menu hide-mobile">
             {categories.map((cat, idx) => (
-              <li key={idx} className={`nav-item${cat.advertise ? ' advertise-item' : ''}${cat.jobs ? ' jobs-item' : ''}`}>
+              <li key={idx} className={`nav-item${cat.advertise ? ' advertise-item' : ''}${cat.jobs ? ' jobs-item' : ''}${cat.jobs && window.location.hash === '#jobs' ? ' jobs-active' : ''}${activeCategory && cat.name.toLowerCase() === activeCategory.toLowerCase() ? ' nav-active' : ''}`}>
                 <a href={cat.hash} className="nav-link">
                   {cat.name}
                   {cat.subcategories.length > 0 && (

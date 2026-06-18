@@ -1509,6 +1509,12 @@ body.dark-mode .navbar-wrapper {
   border-bottom-color: var(--accent-color);
 }
 
+/* Highlight the category of the article/page currently being viewed */
+.nav-item.nav-active .nav-link {
+  color: var(--accent-color);
+  border-bottom-color: var(--accent-color);
+}
+
 /* Dropdown styling */
 .nav-dropdown {
   position: absolute;
@@ -1569,23 +1575,29 @@ body.dark-mode .navbar-wrapper {
 .nav-item.jobs-item {
   margin-left: 0.6rem;
   padding-left: 0.9rem;
-  border-left: 1px solid rgba(255, 255, 255, 0.18);
+  border-left: 1px solid rgba(0, 0, 0, 0.12);
+  display: flex;
+  align-items: center;
 }
 
 .nav-item.jobs-item .nav-link {
-  color: var(--accent-gold);
+  color: var(--text-primary);
   font-weight: 800;
-  border: 1px solid var(--accent-gold);
+  border: 1px solid var(--text-primary);
   border-radius: 4px;
   padding: 0.35rem 0.85rem;
+  margin: 0.4rem 0;            /* gap above & below the box */
+  height: auto;
   letter-spacing: 0.05em;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 
-.nav-item.jobs-item:hover .nav-link {
-  background-color: var(--accent-gold);
-  color: #0a0a0a;
-  border-bottom-color: var(--accent-gold);
+/* Active (on the Jobs page) or hover → red box, white text */
+.nav-item.jobs-item:hover .nav-link,
+.nav-item.jobs-item.jobs-active .nav-link {
+  background-color: var(--accent-color);
+  color: #fff;
+  border-color: var(--accent-color);
 }
 
 /* Nav Actions (Search & Hamburgers) */
