@@ -15,15 +15,15 @@ try {
     $subStmt = $pdo->query("SELECT * FROM subcategories ORDER BY name ASC");
     $subcategories = $subStmt->fetchAll();
 
-    // Group subcategories by category_id
+    // Group subcategories by category_id (cast to int so hosts without mysqlnd still return numeric IDs)
     $subsByCategory = [];
     foreach ($subcategories as $sub) {
-        $catId = $sub['category_id'];
+        $catId = (int)$sub['category_id'];
         if (!isset($subsByCategory[$catId])) {
             $subsByCategory[$catId] = [];
         }
         $subsByCategory[$catId][] = [
-            'id' => $sub['id'],
+            'id' => (int)$sub['id'],
             'name' => $sub['name'],
             'slug' => $sub['slug']
         ];
@@ -32,7 +32,7 @@ try {
     // Combine them into a single array
     $response = [];
     foreach ($categories as $cat) {
-        $catId = $cat['id'];
+        $catId = (int)$cat['id'];
         $response[] = [
             'id' => $catId,
             'name' => $cat['name'],
