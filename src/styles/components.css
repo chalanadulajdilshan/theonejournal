@@ -1565,6 +1565,29 @@ body.dark-mode .navbar-wrapper {
   border-bottom-color: var(--accent-gold);
 }
 
+/* Jobs nav item — visually separated pill */
+.nav-item.jobs-item {
+  margin-left: 0.6rem;
+  padding-left: 0.9rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.nav-item.jobs-item .nav-link {
+  color: var(--accent-gold);
+  font-weight: 800;
+  border: 1px solid var(--accent-gold);
+  border-radius: 4px;
+  padding: 0.35rem 0.85rem;
+  letter-spacing: 0.05em;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.nav-item.jobs-item:hover .nav-link {
+  background-color: var(--accent-gold);
+  color: #0a0a0a;
+  border-bottom-color: var(--accent-gold);
+}
+
 /* Nav Actions (Search & Hamburgers) */
 .navbar-actions {
   display: flex;

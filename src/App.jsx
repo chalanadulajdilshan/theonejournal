@@ -29,6 +29,7 @@ import RatesPricing from './pages/RatesPricing';
 import DisplayBanner from './pages/DisplayBanner';
 import PartnerContent from './pages/PartnerContent';
 import SocialMedia from './pages/SocialMedia';
+import Jobs from './pages/Jobs';
 
 // Module-level guard so a single page load only registers one site view,
 // even though React StrictMode invokes mount effects twice in development.
@@ -205,7 +206,7 @@ export default function App() {
     const pageRoutes = [
       '#about-us', '#advertise', '#careers', '#contact-us',
       '#disclaimer', '#meet-our-team', '#privacy-policy', '#terms-and-conditions',
-      '#live-updates', '#add-on-service', '#rates-pricing', '#display-banner', '#partner-content', '#social-media'
+      '#live-updates', '#add-on-service', '#rates-pricing', '#display-banner', '#partner-content', '#social-media', '#jobs'
     ];
 
     if (pageRoutes.includes(currentHash) || currentHash.startsWith('#category-')) {
@@ -311,6 +312,7 @@ export default function App() {
     case '#display-banner': return <DisplayBanner layoutProps={layoutProps} />;
     case '#partner-content': return <PartnerContent layoutProps={layoutProps} />;
     case '#social-media': return <SocialMedia layoutProps={layoutProps} />;
+    case '#jobs': return <Jobs layoutProps={layoutProps} />;
 
     default: break; // Continue to main app view if no route matched
   }

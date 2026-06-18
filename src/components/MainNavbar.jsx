@@ -15,6 +15,13 @@ const ADVERTISE_ITEM = {
   ],
 };
 
+const JOBS_ITEM = {
+  name: 'Jobs',
+  hash: '#jobs',
+  jobs: true,
+  subcategories: [],
+};
+
 export default function MainNavbar({ onSearchChange, searchVal, categories: backendCategories }) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
@@ -31,6 +38,7 @@ export default function MainNavbar({ onSearchChange, searchVal, categories: back
         hash: `#category-${cat.slug}`,
       })),
     })),
+    JOBS_ITEM,
     ADVERTISE_ITEM,
   ];
 
@@ -88,7 +96,7 @@ export default function MainNavbar({ onSearchChange, searchVal, categories: back
           {/* Desktop Categories Menu - Centered */}
           <ul className="nav-menu hide-mobile">
             {categories.map((cat, idx) => (
-              <li key={idx} className={`nav-item${cat.advertise ? ' advertise-item' : ''}`}>
+              <li key={idx} className={`nav-item${cat.advertise ? ' advertise-item' : ''}${cat.jobs ? ' jobs-item' : ''}`}>
                 <a href={cat.hash} className="nav-link">
                   {cat.name}
                   {cat.subcategories.length > 0 && (
