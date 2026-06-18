@@ -66,8 +66,10 @@ try {
         is_sponsored BOOLEAN DEFAULT FALSE,
         media_type VARCHAR(50) DEFAULT NULL,
         duration VARCHAR(50) DEFAULT NULL,
+        media_url VARCHAR(255) DEFAULT NULL,
         last_clicked_at DATETIME DEFAULT NULL,
         views_count INT DEFAULT 0,
+        sort_order INT NOT NULL DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (category_id) REFERENCES categories(id),
         FOREIGN KEY (subcategory_id) REFERENCES subcategories(id)
@@ -99,8 +101,8 @@ try {
             $subStmt = $pdo->prepare("INSERT INTO subcategories (category_id, name, slug) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)");
             
             $artStmt = $pdo->prepare("INSERT INTO articles 
-                (article_id, title, excerpt, content, image, category_id, subcategory_id, author, date, read_time, is_sponsored, media_type, duration)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                (article_id, title, excerpt, content, image, category_id, subcategory_id, author, date, read_time, is_sponsored, media_type, duration, media_url)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
             $articlesCount = 0;
             $catsCount = 0;
@@ -142,6 +144,7 @@ try {
                     $isSponsored = isset($art['isSponsored']) && $art['isSponsored'] ? 1 : 0;
                     $mediaType = $art['mediaType'] ?? null;
                     $duration = $art['duration'] ?? null;
+                    $mediaUrl = $art['mediaUrl'] ?? null;
 
                     $artStmt->execute([
                         $articleId,
@@ -156,7 +159,8 @@ try {
                         $readTime ?: '3 min read',
                         $isSponsored,
                         $mediaType,
-                        $duration
+                        $duration,
+                        $mediaUrl
                     ]);
                     $articlesCount++;
                 }

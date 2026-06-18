@@ -1,4 +1,5 @@
 import React from 'react';
+import ViewsBadge from './ViewsBadge';
 
 export default function FeaturedCard({ article, onClick }) {
   if (!article) return null;
@@ -23,6 +24,7 @@ export default function FeaturedCard({ article, onClick }) {
           <span>{article.date}</span>
           <span>&bull;</span>
           <span>{article.readTime}</span>
+          <ViewsBadge views={article.views} showLabel={false} />
         </div>
         <h3 className="featured-headline">{article.title}</h3>
         <p className="featured-excerpt">{article.excerpt}</p>

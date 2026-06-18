@@ -1,23 +1,53 @@
-import React, { useState } from 'react';
+import React from 'react';
+import footerLogo from '../assets/footer_logo.png';
 
-export default function Footer() {
-  const [email, setEmail] = useState('');
-  const [isSubscribed, setIsSubscribed] = useState(false);
-
-  const handleSubscribe = (e) => {
-    e.preventDefault();
-    if (email) {
-      setIsSubscribed(true);
-      setEmail('');
-      setTimeout(() => setIsSubscribed(false), 5000);
-    }
-  };
-
+export default function Footer({ categories = [] }) {
   const socialLinks = [
-    { label: 'FB', icon: 'F', url: '#' },
-    { label: 'TW', icon: 'T', url: '#' },
-    { label: 'LN', icon: 'L', url: '#' },
-    { label: 'YT', icon: 'Y', url: '#' }
+    { 
+      label: 'Facebook', 
+      icon: (
+        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M22 12c0-5.52-4.48-10-10-10S2 6.48 2 12c0 4.84 3.44 8.87 8 9.8V15H8v-3h2V9.5C10 7.57 11.57 6 13.5 6H16v3h-2c-.55 0-1 .45-1 1v2h3v3h-3v6.95c4.56-.93 8-4.96 8-9.75z"/>
+        </svg>
+      ), 
+      url: '#' 
+    },
+    { 
+      label: 'Twitter', 
+      icon: (
+        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+        </svg>
+      ), 
+      url: '#' 
+    },
+    { 
+      label: 'Instagram', 
+      icon: (
+        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.051.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/>
+        </svg>
+      ), 
+      url: '#' 
+    },
+    { 
+      label: 'LinkedIn', 
+      icon: (
+        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
+        </svg>
+      ), 
+      url: '#' 
+    },
+    { 
+      label: 'YouTube', 
+      icon: (
+        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.11C19.53 3.545 12 3.545 12 3.545s-7.53 0-9.388.508a3.003 3.003 0 0 0-2.11 2.11C0 8.017 0 12 0 12s0 3.983.502 5.837a3.003 3.003 0 0 0 2.11 2.11c1.858.507 9.388.507 9.388.507s7.53 0 9.388-.507a3.003 3.003 0 0 0 2.11-2.11C24 15.983 24 12 24 12s0-3.983-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+        </svg>
+      ), 
+      url: '#' 
+    }
   ];
 
   return (
@@ -29,88 +59,80 @@ export default function Footer() {
             <path id="gentle-wave" d="M-160 44c30 0 58-18 88-18s58 18 88 18 58-18 88-18 58 18 88 18v44h-352z" />
           </defs>
           <g className="parallax-waves">
-            <use href="#gentle-wave" x="48" y="0" fill="rgba(209, 33, 40, 0.15)" />
-            <use href="#gentle-wave" x="48" y="3" fill="rgba(197, 160, 89, 0.3)" />
-            <use href="#gentle-wave" x="48" y="5" fill="rgba(209, 33, 40, 0.45)" />
-            <use href="#gentle-wave" x="48" y="7" fill="var(--primary-color)" />
+            <use href="#gentle-wave" x="48" y="0" fill="rgba(59, 130, 246, 0.08)" />
+            <use href="#gentle-wave" x="48" y="3" fill="rgba(255, 215, 0, 0.35)" />
+            <use href="#gentle-wave" x="48" y="5" fill="rgba(255, 255, 255, 0.6)" />
+            <use href="#gentle-wave" x="48" y="7" fill="#f4f7fa" />
           </g>
         </svg>
       </div>
 
-      <div className="container" style={{ paddingTop: '1.5rem', position: 'relative', zIndex: 2 }}>
+      <div className="container" style={{ paddingTop: '0.5rem', position: 'relative', zIndex: 2 }}>
+        {/* Upper Brand Row */}
+        <div className="footer-upper-brand-row">
+          <div className="footer-upper-links">
+            {categories.map((cat, idx) => (
+              <React.Fragment key={cat.id}>
+                {idx > 0 && <span className="divider">|</span>}
+                <a href={`#category-${cat.slug}`}>{cat.name}</a>
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
+
+        {/* Brand Divider */}
+        <div className="footer-brand-divider" />
+
         <div className="footer-top-row">
           {/* Brand info */}
           <div className="footer-brand">
-            <h2 className="logo-text" style={{color: '#fff'}}>UAE <span>NEWS</span></h2>
+            <img src={footerLogo} alt="The One Journal Crest Logo" className="footer-crest-logo" />
             <p className="footer-desc">
-              Inspired by the premium styling of Khaleej Times, UAE News & Gossip is the leading source of breaking updates, deep business analysis, technology insights, and lifestyle features across the Gulf and globally.
+              The One Journal is your premier source for breaking news, in-depth reports, business insights, technological developments, and global updates. We deliver accurate, timely, and trusted journalism directly to our readers.
             </p>
             <div className="footer-social-row">
               {socialLinks.map((social, idx) => (
                 <a key={idx} href={social.url} className="social-circle-btn" aria-label={`Follow us on ${social.label}`}>
-                  <span className="bold" style={{fontSize: '0.8rem'}}>{social.icon}</span>
+                  {social.icon}
                 </a>
               ))}
             </div>
           </div>
 
-          {/* Quick links */}
-          <div>
-            <h3 className="footer-col-title">News Sections</h3>
+          {/* Other sections */}
+          <div style={{ paddingLeft: '6rem' }}>
+            <h3 className="footer-col-title">Other Sections</h3>
             <ul className="footer-links-list">
-              <li><a href="#section-partner-content">Partner Content</a></li>
-              <li><a href="#section-world">World News</a></li>
-              <li><a href="#section-business">Business & Markets</a></li>
-              <li><a href="#section-tech">Tech & BTR</a></li>
-              <li><a href="#section-life">Lifestyle & Entertainment</a></li>
+              <li><a href="#about-us">About Us</a></li>
+              <li><a href="#careers">Careers</a></li>
+              <li><a href="#privacy-policy">Privacy Policy</a></li>
+              <li><a href="#terms-and-conditions">Terms & Conditions</a></li>
             </ul>
           </div>
 
-          {/* Utility links */}
-          <div>
-            <h3 className="footer-col-title">Legal & Contact</h3>
-            <ul className="footer-links-list">
-              <li><a href="#">About Us</a></li>
-              <li><a href="#">Careers</a></li>
-              <li><a href="#">Privacy Policy</a></li>
-              <li><a href="#">Terms of Service</a></li>
-              <li><a href="#">Contact Us</a></li>
+          {/* Company links (heading hidden, kept for column alignment) */}
+          <div style={{ textAlign: 'center' }}>
+            <h3 className="footer-col-title" style={{ visibility: 'hidden' }}>Company</h3>
+            <ul className="footer-links-list" style={{ alignItems: 'center' }}>
+              <li><a href="#contact-us">Contact Us</a></li>
+              <li><a href="#advertise">Advertise With Us</a></li>
+              <li><a href="#meet-our-team">Meet Our Team</a></li>
+              <li><a href="#disclaimer">Disclaimer</a></li>
             </ul>
-          </div>
-
-          {/* Newsletter */}
-          <div className="footer-newsletter">
-            <h3 className="footer-col-title">Subscribe</h3>
-            <p className="footer-newsletter-text">
-              Sign up for our morning briefing and get the top news stories delivered straight to your inbox daily.
-            </p>
-            {isSubscribed ? (
-              <div style={{color: 'var(--accent-gold)', fontWeight: 600, fontSize: '0.85rem', padding: '0.5rem', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '2px'}}>
-                Thank you for subscribing! Check your inbox soon.
-              </div>
-            ) : (
-              <form onSubmit={handleSubscribe} className="newsletter-form">
-                <input 
-                  type="email" 
-                  placeholder="Enter your email" 
-                  className="newsletter-input"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-                <button type="submit" className="newsletter-btn">Join</button>
-              </form>
-            )}
           </div>
         </div>
+      </div>
 
-        {/* Footer Bottom */}
-        <div className="footer-bottom-row">
-          <span>&copy; {new Date().getFullYear()} UAE News & Gossip Portal. All rights reserved.</span>
-          <div style={{display: 'flex', gap: '1rem'}}>
-            <a href="#">Back to Top</a>
-            <span>&bull;</span>
-            <a href="#">Site Map</a>
+      {/* Footer Bottom Strip */}
+      <div className="footer-bottom-strip">
+        <div className="container">
+          <div className="footer-bottom-row">
+            <span>&copy; {new Date().getFullYear()} The One Journal. All rights reserved.</span>
+            <div style={{display: 'flex', gap: '1rem'}}>
+              <a href="#">Back to Top</a>
+              <span>&bull;</span>
+              <a href="#">Site Map</a>
+            </div>
           </div>
         </div>
       </div>

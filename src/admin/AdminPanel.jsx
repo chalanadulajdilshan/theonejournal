@@ -1,6 +1,46 @@
 import React, { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
-import '../styles/admin.css';
+import './admin.css';
+import ImageUploadField from './ImageUploadField';
+
+// Password input with a built-in show/hide (eye) toggle.
+function PasswordInput({ value, onChange, placeholder, autoComplete, required }) {
+  const [show, setShow] = useState(false);
+  return (
+    <div style={{ position: 'relative' }}>
+      <input
+        type={show ? 'text' : 'password'}
+        className="form-input"
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        autoComplete={autoComplete}
+        required={required}
+        style={{ margin: 0, paddingRight: '2.75rem' }}
+      />
+      <button
+        type="button"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => setShow(s => !s)}
+        title={show ? 'Hide password' : 'Show password'}
+        aria-label={show ? 'Hide password' : 'Show password'}
+        style={{ position: 'absolute', top: '50%', right: '0.6rem', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', padding: '0.25rem', zIndex: 2 }}
+      >
+        {show ? (
+          <svg width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+            <path d="m10.79 12.912-1.614-1.615a3.5 3.5 0 0 1-4.474-4.474l-2.06-2.06C.938 6.278 0 8 0 8s3 5.5 8 5.5a7.029 7.029 0 0 0 2.79-.588zM5.21 3.088A7.028 7.028 0 0 1 8 2.5c5 0 8 5.5 8 5.5s-.939 1.721-2.641 3.238l-2.062-2.062a3.5 3.5 0 0 0-4.474-4.474L5.21 3.089z" />
+            <path d="M5.525 7.646a2.5 2.5 0 0 0 2.829 2.829l-2.83-2.829zm4.95.708-2.829-2.83a2.5 2.5 0 0 1 2.829 2.829zm3.171 6-12-12 .708-.708 12 12-.708.708z" />
+          </svg>
+        ) : (
+          <svg width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z" />
+            <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z" />
+          </svg>
+        )}
+      </button>
+    </div>
+  );
+}
 
 export default function AdminPanel({ articles, onRefreshArticles, breakingNews, onRefreshBreaking, darkMode, toggleDarkMode }) {
   // Auth state - restore from localStorage to survive component unmount
@@ -31,6 +71,10 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
 
+  // Drag-and-drop ordering state for the articles table
+  const [dragIndex, setDragIndex] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
+
   // Modal / Form state
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formMode, setFormMode] = useState('add'); // 'add' | 'edit'
@@ -50,6 +94,7 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
   const [isSponsored, setIsSponsored] = useState(false);
   const [mediaType, setMediaType] = useState(''); // 'video' | 'podcast' | ''
   const [duration, setDuration] = useState('');
+  const [mediaUrl, setMediaUrl] = useState('');
 
   // Category Manager tab states
   const [selectedManagerCat, setSelectedManagerCat] = useState(null);
@@ -64,6 +109,230 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
   const [newBreakingTitle, setNewBreakingTitle] = useState('');
   const [editingBreakingId, setEditingBreakingId] = useState(null);
   const [editingBreakingTitle, setEditingBreakingTitle] = useState('');
+
+  // Pages Manager state
+  const [selectedPageSlug, setSelectedPageSlug] = useState(null);
+  const [editingPageTitle, setEditingPageTitle] = useState('');
+  const [editingPageContent, setEditingPageContent] = useState('');
+  const [pagesLoading, setPagesLoading] = useState(false);
+  const [pagesSaving, setPagesSaving] = useState(false);
+
+  // Live Updates Manager state
+  const [liveUpdates, setLiveUpdates] = useState([]);
+  const [liveLoading, setLiveLoading] = useState(false);
+  const [editingLiveId, setEditingLiveId] = useState(null);
+  const [luTitle, setLuTitle] = useState('');
+  const [luSummary, setLuSummary] = useState('');
+  const [luContent, setLuContent] = useState('');
+  const [luImage, setLuImage] = useState('');
+  const [luAuthor, setLuAuthor] = useState('Editorial Team');
+  const [luCategory, setLuCategory] = useState('General');
+  const [luPublished, setLuPublished] = useState(true);
+  const [luFormOpen, setLuFormOpen] = useState(false);
+  const [luSaving, setLuSaving] = useState(false);
+
+  const LU_CATEGORIES = ['General', 'Politics', 'Business', 'Technology', 'Sports', 'Entertainment', 'Health', 'International'];
+
+  // Account / Credentials Manager state
+  const [accNewUsername, setAccNewUsername] = useState('');
+  const [accNewPassword, setAccNewPassword] = useState('');
+  const [accConfirmPassword, setAccConfirmPassword] = useState('');
+  const [accCurrentPassword, setAccCurrentPassword] = useState('');
+  const [accSaving, setAccSaving] = useState(false);
+
+  const STATIC_PAGES = [
+    { slug: 'about-us', label: 'About Us', hash: '#about-us' },
+    { slug: 'advertise', label: 'Advertise With Us', hash: '#advertise' },
+    { slug: 'careers', label: 'Careers', hash: '#careers' },
+    { slug: 'contact-us', label: 'Contact Us', hash: '#contact-us' },
+    { slug: 'disclaimer', label: 'Disclaimer', hash: '#disclaimer' },
+    { slug: 'meet-our-team', label: 'Meet Our Team', hash: '#meet-our-team' },
+    { slug: 'privacy-policy', label: 'Privacy Policy', hash: '#privacy-policy' },
+    { slug: 'terms-and-conditions', label: 'Terms & Conditions', hash: '#terms-and-conditions' },
+  ];
+
+  const PAGE_DEFAULTS = {
+    'about-us': {
+      title: 'ABOUT US',
+      content: `The One Journal is an independent digital news and media platform founded in 2026 by Small Team of Freelancers based in GCC dedicated to connecting people with the stories that shape our world. Guided by our vision of "Connecting The World Together," we strive to deliver accurate, timely, and meaningful journalism that informs, educates, and inspires.
+
+Our mission is to keep readers informed through factual reporting, in-depth analysis, and engaging stories across a wide range of topics including world news, business, technology, finance, politics, entertainment, sports, and lifestyle.
+
+Our goal is to present information in a clear, balanced, and accessible way so readers can stay informed and make confident decisions.
+
+At The One Journal, we believe that trust is earned through integrity. Every article is created with a commitment to factual reporting, responsible journalism, and editorial independence. Our team works continuously to bring you breaking news, exclusive features, opinion pieces, and educational content that connects people with the stories shaping our world.
+
+As the media landscape continues to evolve, we embrace innovation to bring news to audiences across multiple platforms while staying true to our core values of accuracy, credibility, and accountability.
+
+Whether you're following breaking news, exploring in-depth analysis, or discovering fresh perspectives, The One Journal is committed to being your trusted source for reliable information from around the world.
+
+Thank you for choosing The One Journal. Together, we stay informed, connected, and empowered.`
+    },
+    'advertise': {
+      title: 'ADVERTISE WITH US',
+      content: `The One Journal is an independent digital news and media platform founded in 2026 by a small team of freelancers based in GCC, dedicated to connecting people with the stories that shape our world.
+
+Reach our engaged global audience through targeted advertising opportunities tailored to your brand.
+
+Partner Content — Sponsored articles and brand features written by our editorial team.
+
+Display Banner Ads — Premium banner placements across high-traffic sections of the website.
+
+Social Media Promotion — Amplify your message through our social media channels.
+
+Newsletter Advertisements — Reach our subscriber base directly in their inbox.
+
+Rates & Pricing — Competitive pricing packages for every budget and campaign goal.
+
+To request a quote or discuss partnership opportunities, please contact us at hello@theonejournal.org`
+    },
+    'careers': {
+      title: 'Careers at The One Journal',
+      content: `Excellence begins with exceptional people.
+
+The One Journal is a premium news and media platform dedicated to delivering trusted journalism, insightful analysis, and compelling stories. Our success is driven by professionals who share our commitment to quality and innovation.
+
+Why Join Us?
+- Work with a passionate and professional editorial team
+- Publish content that reaches a global audience
+- Flexible and remote-friendly opportunities
+- Continuous learning and career growth
+- A culture that values creativity and integrity
+
+Open Positions:
+- Freelance Writer
+- News Editor
+- Content Strategist
+- Journalist
+- Marketing Executive
+- Photographer
+- Video Producer
+
+Start Your Journey
+Tell us about yourself and share your best work at hello@theonejournal.org
+
+Together, let's build the future of premium journalism.`
+    },
+    'contact-us': {
+      title: 'CONTACT US',
+      content: `Welcome to The One Journal
+
+We believe great journalism begins with great conversations. Whether you have breaking news, feedback, a business inquiry, or simply want to connect with our team, we're here to listen.
+
+General Support / Advertising & Sponsorships / Partnerships & Business:
+hello@theonejournal.org
+
+Editorial Desk:
+admin@theonejournal.org
+
+Our editorial team values transparency, integrity, and professionalism in every interaction. Thank you for helping us build a trusted global news platform.`
+    },
+    'disclaimer': {
+      title: 'Disclaimer',
+      content: `The information published on The One Journal is provided for general informational and educational purposes only. While we strive to ensure that all content is accurate and up to date, we make no representations or warranties of any kind regarding the completeness, reliability, or accuracy of the information.
+
+Any action you take based on the information found on this website is strictly at your own risk. The One Journal shall not be held liable for any losses or damages arising from the use of our website.
+
+The views and opinions expressed in articles written by contributors or guest authors are their own and do not necessarily reflect the official position of The One Journal.
+
+We reserve the right to modify, update, or remove content without prior notice.
+
+Editorial Disclaimer
+The One Journal is an independent news and media platform committed to providing timely news, opinions, and analysis. Although every effort is made to verify facts before publication, errors or omissions may occasionally occur.
+
+Financial Information Disclaimer
+Some articles may discuss financial markets, cryptocurrencies, stocks, or investments. The information provided is for educational purposes only and should not be considered financial, investment, legal, or tax advice.
+
+External Links
+Our website may contain links to third-party websites for reference or convenience. We do not control, endorse, or guarantee the accuracy of external websites.
+
+Copyright Notice
+All original content published on The One Journal, including text, graphics, logos, and multimedia, is protected by copyright laws. Unauthorized reproduction or distribution without prior written permission is prohibited.`
+    },
+    'meet-our-team': {
+      title: 'Meet Our Team',
+      content: `Ahamed Zumry — Founder
+Leads the editorial vision and oversees all content published on The One Journal.
+
+Freya Johnson — Co-founder & Managing Editor
+Coordinates the editorial team and ensures every article meets quality standards.
+
+Ayesha Anees — Technology Editor
+Reports on technology, AI, startups, and digital innovation.
+
+Ansha Gurung — Lifestyle & Culture Writer
+Writes features on travel, entertainment, health, and lifestyle.
+
+Mohamed Rimzan — Social Media Manager
+Handles social media strategy and community interaction.
+
+Together, we strive to deliver accurate, timely, and engaging journalism that connects readers across the globe.`
+    },
+    'privacy-policy': {
+      title: 'Privacy Policy',
+      content: `Effective Date: 01/06/2025 | Last Updated: 15/06/2025
+
+Welcome to The One Journal. Your privacy is important to us. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website and use our services.
+
+By accessing or using The One Journal, you agree to the practices described in this Privacy Policy.
+
+1. Information We Collect
+We may collect personal information you voluntarily provide: full name, email address, phone number, contact forms, newsletter subscriptions, and comments. We also automatically collect non-personal data such as IP address, browser type, pages visited, and general location.
+
+2. How We Use Your Information
+We use collected information to operate and maintain our website, publish and improve content, respond to inquiries, send newsletters (with consent), personalize user experience, analyze traffic, prevent fraud, and comply with legal obligations.
+
+3. Cookies and Tracking Technologies
+We use cookies to remember preferences, analyze performance, and improve navigation. Users may disable cookies through browser settings; however, certain features may not function properly.
+
+4. Data Security
+We implement commercially reasonable administrative, technical, and organizational measures to protect your information. However, no method of internet transmission is completely secure.
+
+5. Data Retention
+We retain personal information only for as long as necessary to provide our services, comply with legal obligations, and maintain legitimate business records.
+
+6. Your Privacy Rights
+Depending on your jurisdiction, you may have rights to access, correct, delete, or restrict processing of your personal data.
+
+7. Changes to This Privacy Policy
+We reserve the right to modify this Privacy Policy at any time. Continued use of the website constitutes acceptance of the updated policy.
+
+18. Contact Us
+If you have questions regarding this Privacy Policy, please contact us at hello@theonejournal.org`
+    },
+    'terms-and-conditions': {
+      title: 'Terms and Conditions',
+      content: `Effective Date: June 15, 2026 | Last Updated: June 16, 2026
+
+Welcome to The One Journal. By accessing or using our website, you agree to comply with and be bound by the following Terms and Conditions. If you do not agree, please discontinue using our website.
+
+Acceptable Use
+You agree not to use the website for unlawful purposes, copy or scrape content using automated tools, upload malware or harmful code, misrepresent your identity, or violate the rights of others.
+
+Intellectual Property
+All content on The One Journal — articles, text, images, videos, graphics, logos, designs, and website layout — is owned by or licensed to The One Journal and protected by copyright law. Unauthorized reproduction or distribution without written permission is prohibited.
+
+Accuracy of Information
+While we strive for accuracy, news stories may evolve and information may change over time. We do not guarantee that all content is complete, current, or error-free.
+
+Third-Party Links
+Our website may include links to external websites. The One Journal is not responsible for the content, policies, or practices of those third-party sites.
+
+Sponsored Content
+Some articles or features may contain sponsored or promotional material. Such content will be identified where appropriate.
+
+Limitation of Liability
+To the fullest extent permitted by law, The One Journal shall not be liable for direct or indirect damages, financial losses, data loss, business interruption, or decisions made based on published content. Use of the website is entirely at your own risk.
+
+Changes to These Terms
+We reserve the right to update or modify these Terms and Conditions at any time without prior notice. Continued use of the website after changes are posted constitutes acceptance of the revised terms.
+
+Contact Us
+Email: hello@theonejournal.org | Website: https://theonejournal.org
+
+By using The One Journal, you acknowledge that you have read and agreed to these Terms and Conditions.`
+    }
+  };
 
   // Top Header Settings state
   const [headerRates, setHeaderRates] = useState([]);
@@ -252,13 +521,17 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
     }
   };
 
-  const handleViewWebsite = async () => {
-    await handleLogout();
-    window.location.hash = '';
+  const handleViewWebsite = () => {
+    // Admin lives on its own page now — just open the public website.
+    window.location.href = '/';
   };
 
-  // Compile flat list of articles
-  const allArticlesList = articles ? Object.values(articles).flat() : [];
+  // Compile a deduplicated flat list of articles. The public feed repeats
+  // top-viewed items inside the "You May Like" group, which would otherwise
+  // show duplicate rows and break the category filter / counts.
+  const allArticlesList = articles
+    ? Object.values(articles).flat().filter((a, i, arr) => arr.findIndex(x => x.id === a.id) === i)
+    : [];
 
   // Categorized breakdown stats
   const totalCount = allArticlesList.length;
@@ -309,6 +582,7 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
     setIsSponsored(false);
     setMediaType('');
     setDuration('');
+    setMediaUrl('');
     setIsFormOpen(true);
   };
 
@@ -329,6 +603,7 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
     setIsSponsored(art.isSponsored || false);
     setMediaType(art.mediaType || '');
     setDuration(art.duration || '');
+    setMediaUrl(art.mediaUrl || '');
     setIsFormOpen(true);
   };
 
@@ -352,7 +627,8 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
       readTime,
       isSponsored: isSponsored ? 1 : 0,
       mediaType: category.toLowerCase() === 'videos & podcasts' ? mediaType : null,
-      duration: category.toLowerCase() === 'videos & podcasts' ? duration : null
+      duration: category.toLowerCase() === 'videos & podcasts' ? duration : null,
+      mediaUrl: category.toLowerCase() === 'videos & podcasts' ? mediaUrl : null
     };
 
     if (formMode === 'edit') {
@@ -420,6 +696,39 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
     });
   };
 
+  // DRAG-AND-DROP ARTICLE ORDERING
+  // Persists the new display order; the website feed (get_articles) is ordered
+  // by sort_order, so the change is reflected on the frontend after refresh.
+  const saveArticleOrder = async (newOrderIds) => {
+    try {
+      const res = await fetch('/api/reorder_articles.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order: newOrderIds })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        addToast('Article order updated — now live on the website.', 'success');
+        onRefreshArticles();
+      } else {
+        addToast(data.error || 'Failed to reorder.', 'error');
+      }
+    } catch (err) {
+      addToast('Network connection failed.', 'error');
+    }
+  };
+
+  const handleArticleDrop = (dropIndex) => {
+    const fromIndex = dragIndex;
+    setDragIndex(null);
+    setDragOverIndex(null);
+    if (fromIndex === null || fromIndex === dropIndex) return;
+    const list = [...filteredArticles];
+    const [moved] = list.splice(fromIndex, 1);
+    list.splice(dropIndex, 0, moved);
+    saveArticleOrder(list.map(a => a.id));
+  };
+
   // CATEGORY & SUBCATEGORY CRUD HANDLERS
   const handleAddCategory = async (e) => {
     e.preventDefault();
@@ -472,7 +781,7 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
   const handleDeleteCategory = (catId) => {
     Swal.fire({
       title: 'Delete Category?',
-      text: 'WARNING: Deleting this category will delete all its subcategories. Articles linked to this category may not render correctly. Proceed?',
+      text: 'WARNING: This permanently deletes the category, all its sub-tags, AND every article in it. This cannot be undone. Proceed?',
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#d12128',
@@ -557,7 +866,7 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
   const handleDeleteSubcategory = (subId) => {
     Swal.fire({
       title: 'Delete Sub-tag?',
-      text: 'Are you sure you want to permanently delete this sub-tag?',
+      text: 'WARNING: This permanently deletes the sub-tag and any articles using it. This cannot be undone. Proceed?',
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#d12128',
@@ -667,6 +976,258 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
         }
       }
     });
+  };
+
+  // LIVE UPDATES CRUD HANDLERS
+  const fetchLiveUpdates = async () => {
+    setLiveLoading(true);
+    try {
+      const res = await fetch('/api/manage_live_updates.php');
+      const data = await res.json();
+      setLiveUpdates(Array.isArray(data) ? data : []);
+    } catch (err) {
+      addToast('Failed to load live updates.', 'error');
+    } finally {
+      setLiveLoading(false);
+    }
+  };
+
+  const openAddLiveUpdate = () => {
+    setEditingLiveId(null);
+    setLuTitle('');
+    setLuSummary('');
+    setLuContent('');
+    setLuImage('');
+    setLuAuthor('Editorial Team');
+    setLuCategory('General');
+    setLuPublished(true);
+    setLuFormOpen(true);
+  };
+
+  const openEditLiveUpdate = (item) => {
+    setEditingLiveId(item.id);
+    setLuTitle(item.title);
+    setLuSummary(item.summary || '');
+    setLuContent(item.content || '');
+    setLuImage(item.image || '');
+    setLuAuthor(item.author || 'Editorial Team');
+    setLuCategory(item.category || 'General');
+    setLuPublished(item.is_published === 1 || item.is_published === true);
+    setLuFormOpen(true);
+  };
+
+  const handleSaveLiveUpdate = async (e) => {
+    e.preventDefault();
+    if (!luTitle.trim()) return;
+    setLuSaving(true);
+    const action = editingLiveId ? 'edit' : 'add';
+    const payload = {
+      action,
+      title: luTitle,
+      summary: luSummary,
+      content: luContent,
+      image: luImage,
+      author: luAuthor,
+      category: luCategory,
+      is_published: luPublished ? 1 : 0
+    };
+    if (editingLiveId) payload.id = editingLiveId;
+    try {
+      const res = await fetch('/api/manage_live_updates.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) {
+        addToast(editingLiveId ? 'Live update saved.' : 'Live update published.', 'success');
+        setLuFormOpen(false);
+        fetchLiveUpdates();
+      } else {
+        addToast(data.error || 'Failed to save.', 'error');
+      }
+    } catch (err) {
+      addToast('Request failed.', 'error');
+    } finally {
+      setLuSaving(false);
+    }
+  };
+
+  const handleToggleLivePublish = async (item) => {
+    const newVal = item.is_published ? 0 : 1;
+    try {
+      const res = await fetch('/api/manage_live_updates.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'toggle_publish', id: item.id, is_published: newVal })
+      });
+      const data = await res.json();
+      if (data.success) {
+        addToast(newVal ? 'Published.' : 'Set to draft.', 'success');
+        fetchLiveUpdates();
+      }
+    } catch (err) {
+      addToast('Request failed.', 'error');
+    }
+  };
+
+  const handleDeleteLiveUpdate = (id) => {
+    Swal.fire({
+      title: 'Delete Live Update?',
+      text: 'This update will be permanently removed from the website.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d12128',
+      cancelButtonColor: '#7a7a7a',
+      confirmButtonText: 'Yes, delete it!',
+      background: document.body.classList.contains('dark-mode') ? '#1e293b' : '#ffffff',
+      color: document.body.classList.contains('dark-mode') ? '#f8fafc' : '#121212',
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          const res = await fetch('/api/manage_live_updates.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'delete', id })
+          });
+          const data = await res.json();
+          if (data.success) {
+            addToast('Live update deleted.', 'success');
+            fetchLiveUpdates();
+          } else {
+            addToast(data.error || 'Failed to delete.', 'error');
+          }
+        } catch (err) {
+          addToast('Request failed.', 'error');
+        }
+      }
+    });
+  };
+
+  // ACCOUNT / CREDENTIALS HANDLER
+  const handleUpdateCredentials = async (e) => {
+    e.preventDefault();
+    if (!accCurrentPassword) {
+      addToast('Enter your current password to confirm changes.', 'error');
+      return;
+    }
+    if (!accNewUsername.trim() && !accNewPassword) {
+      addToast('Enter a new username and/or a new password.', 'error');
+      return;
+    }
+    if (accNewPassword && accNewPassword.length < 8) {
+      addToast('New password must be at least 8 characters.', 'error');
+      return;
+    }
+    if (accNewPassword && accNewPassword !== accConfirmPassword) {
+      addToast('New password and confirmation do not match.', 'error');
+      return;
+    }
+    setAccSaving(true);
+    try {
+      const res = await fetch('/api/update_admin.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          current_password: accCurrentPassword,
+          new_username: accNewUsername.trim(),
+          new_password: accNewPassword
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        addToast('Credentials updated successfully.', 'success');
+        if (data.username) {
+          setAdminUsername(data.username);
+          localStorage.setItem('admin_username', data.username);
+        }
+        setAccNewUsername('');
+        setAccNewPassword('');
+        setAccConfirmPassword('');
+        setAccCurrentPassword('');
+      } else {
+        addToast(data.error || 'Failed to update credentials.', 'error');
+      }
+    } catch (err) {
+      addToast('Network connection failed.', 'error');
+    } finally {
+      setAccSaving(false);
+    }
+  };
+
+  // PAGES CRUD HANDLERS
+  const fetchPageContent = async (slug) => {
+    setPagesLoading(true);
+    const defaults = PAGE_DEFAULTS[slug] || { title: '', content: '' };
+    try {
+      const res = await fetch(`/api/get_configs.php?key=page_${slug}`);
+      const data = await res.json();
+      if (data.success && data.value && data.value.content) {
+        setEditingPageTitle(data.value.title || defaults.title);
+        setEditingPageContent(data.value.content);
+      } else {
+        setEditingPageTitle(defaults.title);
+        setEditingPageContent(defaults.content);
+      }
+    } catch (err) {
+      setEditingPageTitle(defaults.title);
+      setEditingPageContent(defaults.content);
+    } finally {
+      setPagesLoading(false);
+    }
+  };
+
+  const handlePageSelect = (slug) => {
+    setSelectedPageSlug(slug);
+    fetchPageContent(slug);
+  };
+
+  const handleSavePage = async (e) => {
+    e.preventDefault();
+    if (!selectedPageSlug) return;
+    setPagesSaving(true);
+    try {
+      const res = await fetch('/api/save_configs.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          key: `page_${selectedPageSlug}`,
+          value: { title: editingPageTitle, content: editingPageContent }
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        addToast('Page saved — changes are now live on the website!', 'success');
+      } else {
+        addToast(data.error || 'Failed to save page.', 'error');
+      }
+    } catch (err) {
+      addToast('Network connection failed.', 'error');
+    } finally {
+      setPagesSaving(false);
+    }
+  };
+
+  const handleResetPage = async () => {
+    if (!selectedPageSlug) return;
+    setPagesSaving(true);
+    try {
+      const res = await fetch('/api/save_configs.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: `page_${selectedPageSlug}`, value: { title: '', content: '' } })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setEditingPageTitle('');
+        setEditingPageContent('');
+        addToast('Page reset to default static content.', 'success');
+      }
+    } catch (err) {
+      addToast('Network connection failed.', 'error');
+    } finally {
+      setPagesSaving(false);
+    }
   };
 
   // If loading auth state
@@ -797,7 +1358,7 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
       {/* Admin Navbar */}
       <nav className="admin-navbar">
         <div className="container admin-nav-container">
-          <a href="#admin" className="admin-brand">
+          <a href="/admin/" className="admin-brand">
             <svg width="22" height="22" fill="currentColor" viewBox="0 0 16 16" style={{ color: 'var(--accent-gold)' }}>
               <path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z" />
             </svg>
@@ -904,7 +1465,7 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
         </div>
 
         {/* Tab Selection */}
-        <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid var(--border-color)', margin: '2rem 0 1.5rem 0', paddingBottom: '0.1rem' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid var(--border-color)', margin: '2rem 0 1.5rem 0', paddingBottom: '0.1rem', overflowX: 'auto', scrollbarWidth: 'thin' }}>
           <button
             onClick={() => setActiveTab('articles')}
             className={`semibold`}
@@ -955,6 +1516,59 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
             }}
           >
             Breaking News Ticker
+          </button>
+          <button
+            onClick={() => setActiveTab('pages')}
+            className={`semibold`}
+            style={{
+              background: 'none',
+              border: 'none',
+              borderBottom: activeTab === 'pages' ? '3px solid var(--accent-gold)' : '3px solid transparent',
+              color: activeTab === 'pages' ? 'var(--text-primary)' : 'var(--text-muted)',
+              padding: '0.75rem 1.5rem',
+              cursor: 'pointer',
+              fontSize: '0.95rem',
+              outline: 'none',
+              transition: 'all var(--transition-fast)'
+            }}
+          >
+            Pages Manager
+          </button>
+          <button
+            onClick={() => { setActiveTab('liveupdates'); fetchLiveUpdates(); }}
+            className={`semibold`}
+            style={{
+              background: 'none',
+              border: 'none',
+              borderBottom: activeTab === 'liveupdates' ? '3px solid var(--accent-gold)' : '3px solid transparent',
+              color: activeTab === 'liveupdates' ? 'var(--text-primary)' : 'var(--text-muted)',
+              padding: '0.75rem 1.5rem',
+              cursor: 'pointer',
+              fontSize: '0.95rem',
+              outline: 'none',
+              transition: 'all var(--transition-fast)',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            Live Updates
+          </button>
+          <button
+            onClick={() => setActiveTab('account')}
+            className={`semibold`}
+            style={{
+              background: 'none',
+              border: 'none',
+              borderBottom: activeTab === 'account' ? '3px solid var(--accent-gold)' : '3px solid transparent',
+              color: activeTab === 'account' ? 'var(--text-primary)' : 'var(--text-muted)',
+              padding: '0.75rem 1.5rem',
+              cursor: 'pointer',
+              fontSize: '0.95rem',
+              outline: 'none',
+              transition: 'all var(--transition-fast)',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            Account
           </button>
         </div>
 
@@ -1012,8 +1626,22 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredArticles.map((art) => (
-                      <tr key={art.id}>
+                    {filteredArticles.map((art, index) => (
+                      <tr
+                        key={art.id}
+                        draggable
+                        onDragStart={() => setDragIndex(index)}
+                        onDragOver={(e) => { e.preventDefault(); if (dragOverIndex !== index) setDragOverIndex(index); }}
+                        onDrop={() => handleArticleDrop(index)}
+                        onDragEnd={() => { setDragIndex(null); setDragOverIndex(null); }}
+                        style={{
+                          cursor: 'grab',
+                          opacity: dragIndex === index ? 0.4 : 1,
+                          boxShadow: dragOverIndex === index && dragIndex !== null && dragIndex !== index
+                            ? 'inset 0 2px 0 var(--accent-gold)' : undefined
+                        }}
+                        title="Drag to reorder — the new order goes live on the website"
+                      >
                         <td>
                           <div className="table-article-title-cell">
                             <img
@@ -1268,79 +1896,109 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
 
         {/* TAB 3: BREAKING NEWS TICKER MANAGER */}
         {activeTab === 'breaking' && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '2rem', animation: 'modalSlideIn 0.2s ease', marginTop: '1rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', animation: 'modalSlideIn 0.2s ease', marginTop: '1rem' }}>
 
-            {/* Left Column: Active Ticker Lines */}
-            <div style={{ backgroundColor: 'var(--bg-primary)', padding: '1.5rem', borderRadius: '6px', border: '1px solid var(--border-color)', boxShadow: 'var(--card-shadow)' }}>
-              <h3 style={{ marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <svg width="18" height="18" fill="currentColor" viewBox="0 0 16 16" style={{ color: 'var(--accent-gold)' }}>
-                  <path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2zm.002-12a1 1 0 0 0 0 2v5h1.5v1h-3v-1h1.5V6a1 1 0 0 0 0-2h.002z" />
-                  <path d="M8 1.918A6.002 6.002 0 0 0 2 8v4h12V8a6.002 6.002 0 0 0-6-6.082zM8 0a8 8 0 0 1 8 8v4h1.5v1h-19v-1H0V8a8 8 0 0 1 8-8z" />
-                </svg>
-                Active Ticker Items
-              </h3>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                {breakingNews && breakingNews.length > 0 ? (
-                  breakingNews.map((item) => (
-                    <div
-                      key={item.id}
-                      className={`category-item-row ${editingBreakingId === item.id ? 'active' : ''}`}
-                      style={{ padding: '0.75rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '4px' }}
-                    >
-                      {editingBreakingId === item.id ? (
-                        <form onSubmit={handleEditBreaking} style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
-                          <input
-                            type="text"
-                            className="form-input"
-                            value={editingBreakingTitle}
-                            onChange={(e) => setEditingBreakingTitle(e.target.value)}
-                            required
-                            style={{ margin: 0, padding: '0.25rem 0.5rem' }}
-                          />
-                          <button type="submit" className="btn-primary" style={{ padding: '0.25rem 0.75rem', width: 'auto', fontSize: '0.75rem' }}>Save</button>
-                          <button type="button" onClick={() => setEditingBreakingId(null)} className="btn-secondary" style={{ padding: '0.25rem 0.75rem', width: 'auto', fontSize: '0.75rem' }}>Cancel</button>
-                        </form>
-                      ) : (
-                        <>
-                          <span className="semibold" style={{ fontSize: '0.85rem', color: 'var(--text-primary)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '75%' }}>
-                            {item.title}
-                          </span>
-                          <div style={{ display: 'flex', gap: '0.25rem' }}>
-                            <button
-                              onClick={() => {
-                                setEditingBreakingId(item.id);
-                                setEditingBreakingTitle(item.title);
-                              }}
-                              className="btn-action-edit"
-                              style={{ width: '28px', height: '28px', padding: 0 }}
-                              title="Edit Ticker Line"
-                            >
-                              ✏️
-                            </button>
-                            <button
-                              onClick={() => handleDeleteBreaking(item.id)}
-                              className="btn-action-delete"
-                              style={{ width: '28px', height: '28px', padding: 0 }}
-                              title="Delete Ticker Line"
-                            >
-                              🗑️
-                            </button>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-muted" style={{ fontSize: '0.85rem' }}>No breaking news ticker items available. Add one below.</p>
-                )}
+            {/* Full-width Table: Live Updates Items */}
+            <div style={{ backgroundColor: 'var(--bg-primary)', borderRadius: '6px', border: '1px solid var(--border-color)', boxShadow: 'var(--card-shadow)', overflow: 'hidden' }}>
+              <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
+                  <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style={{ color: 'var(--accent-gold)' }}>
+                    <path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2zm.002-12a1 1 0 0 0 0 2v5h1.5v1h-3v-1h1.5V6a1 1 0 0 0 0-2h.002z" />
+                    <path d="M8 1.918A6.002 6.002 0 0 0 2 8v4h12V8a6.002 6.002 0 0 0-6-6.082zM8 0a8 8 0 0 1 8 8v4h1.5v1h-19v-1H0V8a8 8 0 0 1 8-8z" />
+                  </svg>
+                  Live Updates &amp; Breaking News Ticker
+                </h3>
+                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 500 }}>
+                  {breakingNews ? breakingNews.length : 0} item{breakingNews && breakingNews.length !== 1 ? 's' : ''} active
+                </span>
               </div>
+
+              {breakingNews && breakingNews.length > 0 ? (
+                <div style={{ overflowX: 'auto' }}>
+                  <div style={{ overflowY: breakingNews.length > 4 ? 'auto' : 'visible', maxHeight: breakingNews.length > 4 ? '340px' : 'none' }}>
+                    <table className="admin-table" style={{ margin: 0, borderRadius: 0, border: 'none' }}>
+                      <thead style={{ position: breakingNews.length > 4 ? 'sticky' : 'static', top: 0, zIndex: 1, backgroundColor: 'var(--bg-secondary)' }}>
+                        <tr>
+                          <th style={{ width: '48px', textAlign: 'center' }}>#</th>
+                          <th>Headline Text</th>
+                          <th style={{ width: '160px' }}>Date Added</th>
+                          <th style={{ width: '100px', textAlign: 'right' }}>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {breakingNews.map((item, idx) => (
+                          <tr key={item.id}>
+                            {editingBreakingId === item.id ? (
+                              <td colSpan={4} style={{ padding: '0.6rem 1rem' }}>
+                                <form onSubmit={handleEditBreaking} style={{ display: 'flex', gap: '0.5rem', width: '100%', alignItems: 'center' }}>
+                                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', minWidth: '24px', textAlign: 'center' }}>{idx + 1}</span>
+                                  <input
+                                    type="text"
+                                    className="form-input"
+                                    value={editingBreakingTitle}
+                                    onChange={(e) => setEditingBreakingTitle(e.target.value)}
+                                    required
+                                    autoFocus
+                                    style={{ margin: 0, padding: '0.35rem 0.6rem', flex: 1 }}
+                                  />
+                                  <button type="submit" className="btn-primary" style={{ padding: '0.35rem 0.85rem', width: 'auto', fontSize: '0.78rem', whiteSpace: 'nowrap' }}>Save</button>
+                                  <button type="button" onClick={() => setEditingBreakingId(null)} className="btn-secondary" style={{ padding: '0.35rem 0.75rem', width: 'auto', fontSize: '0.78rem' }}>Cancel</button>
+                                </form>
+                              </td>
+                            ) : (
+                              <>
+                                <td style={{ textAlign: 'center', color: 'var(--text-muted)', fontWeight: 600, fontSize: '0.8rem' }}>{idx + 1}</td>
+                                <td>
+                                  <span style={{ fontWeight: 500, fontSize: '0.875rem', color: 'var(--text-primary)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                    {item.title}
+                                  </span>
+                                </td>
+                                <td style={{ color: 'var(--text-secondary)', fontSize: '0.78rem' }}>
+                                  {item.created_at ? new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                                </td>
+                                <td style={{ textAlign: 'right' }}>
+                                  <div className="action-buttons" style={{ justifyContent: 'flex-end' }}>
+                                    <button
+                                      onClick={() => { setEditingBreakingId(item.id); setEditingBreakingTitle(item.title); }}
+                                      className="btn-action-edit"
+                                      title="Edit"
+                                    >
+                                      <svg width="13" height="13" fill="currentColor" viewBox="0 0 16 16">
+                                        <path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708l-3-3zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207l6.5-6.5z"/>
+                                        <path d="M5.5 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.03l-.179.178a.5.5 0 0 0-.12.196l-.51 1.87a.5.5 0 0 0 .617.614l1.871-.51a.5.5 0 0 0 .196-.12l6.634-6.634z"/>
+                                      </svg>
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteBreaking(item.id)}
+                                      className="btn-action-delete"
+                                      title="Delete"
+                                    >
+                                      <svg width="13" height="13" fill="currentColor" viewBox="0 0 16 16">
+                                        <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                                        <path fillRule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                                      </svg>
+                                    </button>
+                                  </div>
+                                </td>
+                              </>
+                            )}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : (
+                <div className="empty-state" style={{ padding: '2.5rem' }}>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', textAlign: 'center' }}>No live update items yet. Add one below.</p>
+                </div>
+              )}
             </div>
 
-            {/* Right Column: Add Headline Form */}
+            {/* Add New Headline Form */}
             <div style={{ backgroundColor: 'var(--bg-primary)', padding: '1.5rem', borderRadius: '6px', border: '1px solid var(--border-color)', boxShadow: 'var(--card-shadow)' }}>
               <h3 style={{ marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
-                Add New Ticker Headline
+                Add New Live Update / Ticker Headline
               </h3>
               <form onSubmit={handleAddBreaking}>
                 <div className="form-group">
@@ -1368,7 +2026,390 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
           </div>
         )}
 
-        {/* TAB 4: TOP HEADER SETTINGS */}
+        {/* TAB 4: PAGES MANAGER */}
+        {activeTab === 'pages' && (
+          <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: '2rem', animation: 'modalSlideIn 0.2s ease', marginTop: '1rem' }}>
+
+            {/* Left: Page list */}
+            <div style={{ backgroundColor: 'var(--bg-primary)', padding: '1.5rem', borderRadius: '6px', border: '1px solid var(--border-color)', boxShadow: 'var(--card-shadow)' }}>
+              <h3 style={{ marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style={{ color: 'var(--accent-gold)' }}>
+                  <path d="M5 4a.5.5 0 0 0 0 1h6a.5.5 0 0 0 0-1H5zm-.5 2.5A.5.5 0 0 1 5 6h6a.5.5 0 0 1 0 1H5a.5.5 0 0 1-.5-.5zM5 8a.5.5 0 0 0 0 1h6a.5.5 0 0 0 0-1H5zm0 2a.5.5 0 0 0 0 1h3a.5.5 0 0 0 0-1H5z"/>
+                  <path d="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2zm10-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1z"/>
+                </svg>
+                Static Pages
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                {STATIC_PAGES.map((page) => (
+                  <div
+                    key={page.slug}
+                    onClick={() => handlePageSelect(page.slug)}
+                    style={{
+                      padding: '0.65rem 0.85rem',
+                      borderRadius: '4px',
+                      border: '1px solid',
+                      borderColor: selectedPageSlug === page.slug ? 'var(--accent-gold)' : 'var(--border-color)',
+                      backgroundColor: selectedPageSlug === page.slug ? 'rgba(197,160,89,0.06)' : 'transparent',
+                      cursor: 'pointer',
+                      fontWeight: selectedPageSlug === page.slug ? 700 : 500,
+                      fontSize: '0.875rem',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      transition: 'all var(--transition-fast)'
+                    }}
+                  >
+                    <span>{page.label}</span>
+                    <a
+                      href={page.hash}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{ fontSize: '0.7rem', color: 'var(--accent-gold)', textDecoration: 'none' }}
+                      onClick={e => e.stopPropagation()}
+                      title="View live page"
+                    >
+                      ↗
+                    </a>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Right: Editor */}
+            <div style={{ backgroundColor: 'var(--bg-primary)', padding: '1.5rem', borderRadius: '6px', border: '1px solid var(--border-color)', boxShadow: 'var(--card-shadow)' }}>
+              {selectedPageSlug ? (
+                <>
+                  <h3 style={{ marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    Editing:&nbsp;<strong style={{ color: 'var(--accent-gold)' }}>{STATIC_PAGES.find(p => p.slug === selectedPageSlug)?.label}</strong>
+                    <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 400 }}>
+                      ✓ Changes go live on the website immediately after saving
+                    </span>
+                  </h3>
+                  {pagesLoading ? (
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Loading current content...</p>
+                  ) : (
+                    <form onSubmit={handleSavePage}>
+                      <div className="form-group">
+                        <label>Page Title</label>
+                        <input
+                          type="text"
+                          className="form-input"
+                          value={editingPageTitle}
+                          onChange={e => setEditingPageTitle(e.target.value)}
+                          placeholder={`e.g. ${STATIC_PAGES.find(p => p.slug === selectedPageSlug)?.label}`}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Page Content</label>
+                        <textarea
+                          className="form-textarea"
+                          value={editingPageContent}
+                          onChange={e => setEditingPageContent(e.target.value)}
+                          placeholder="Write the full page content here. Use a blank line between paragraphs to separate them."
+                          rows={16}
+                          style={{ resize: 'vertical', fontFamily: 'inherit', lineHeight: '1.7' }}
+                        />
+                        <small style={{ color: 'var(--text-muted)', display: 'block', marginTop: '0.4rem' }}>
+                          Separate paragraphs with a blank line. Leave both fields empty and save to restore the default static content.
+                        </small>
+                      </div>
+                      <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem', flexWrap: 'wrap' }}>
+                        <button type="submit" className="btn-primary" style={{ width: 'auto' }} disabled={pagesSaving}>
+                          {pagesSaving ? 'Saving...' : '✓ Save & Publish Live'}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          style={{ width: 'auto' }}
+                          disabled={pagesSaving}
+                          onClick={handleResetPage}
+                        >
+                          ↺ Reset to Default
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </>
+              ) : (
+                <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '4rem 2rem' }}>
+                  <svg width="40" height="40" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24" style={{ marginBottom: '1rem', opacity: 0.4 }}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <p>Select a page from the left to edit its content.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 5: LIVE UPDATES MANAGER */}
+        {activeTab === 'liveupdates' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', animation: 'modalSlideIn 0.2s ease', marginTop: '1rem' }}>
+
+            {/* Header bar with Add button and view link */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1rem' }}>Live Updates Feed</h3>
+                <p style={{ margin: '0.25rem 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  Published entries appear live on{' '}
+                  <a href="#live-updates" target="_blank" rel="noreferrer" style={{ color: 'var(--accent-gold)' }}>theonejournal.com/live-updates</a>
+                </p>
+              </div>
+              <button
+                onClick={openAddLiveUpdate}
+                className="btn-primary"
+                style={{ width: 'auto', padding: '0.5rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem' }}
+              >
+                <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2z"/></svg>
+                New Live Update
+              </button>
+            </div>
+
+            {/* Add / Edit form */}
+            {luFormOpen && (
+              <div style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--accent-gold)', borderRadius: '8px', padding: '1.5rem', boxShadow: 'var(--card-shadow)' }}>
+                <h4 style={{ marginTop: 0, marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--accent-gold)' }}>
+                  {editingLiveId ? 'Edit Live Update' : 'New Live Update'}
+                </h4>
+                <form onSubmit={handleSaveLiveUpdate}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                    <div className="form-group" style={{ gridColumn: '1 / -1', marginBottom: 0 }}>
+                      <label>Headline / Title *</label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        value={luTitle}
+                        onChange={e => setLuTitle(e.target.value)}
+                        placeholder="e.g. LIVE: Summit concludes with landmark trade agreement"
+                        required
+                        style={{ margin: 0 }}
+                      />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label>Category</label>
+                      <select className="form-input" value={luCategory} onChange={e => setLuCategory(e.target.value)} style={{ margin: 0 }}>
+                        {LU_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0, display: 'flex', alignItems: 'center', gap: '0.6rem', paddingTop: '1.5rem' }}>
+                      <input
+                        type="checkbox"
+                        id="lu-pub"
+                        checked={luPublished}
+                        onChange={e => setLuPublished(e.target.checked)}
+                        style={{ width: '16px', height: '16px', accentColor: 'var(--accent-gold)', cursor: 'pointer' }}
+                      />
+                      <label htmlFor="lu-pub" style={{ fontWeight: 500, cursor: 'pointer', margin: 0 }}>Publish immediately (visible on website)</label>
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label>Hero Image <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(shown in widget &amp; detail view)</span></label>
+                      <ImageUploadField value={luImage} onChange={setLuImage} onToast={addToast} />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label>Author / Byline</label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        value={luAuthor}
+                        onChange={e => setLuAuthor(e.target.value)}
+                        placeholder="Editorial Team"
+                        style={{ margin: 0 }}
+                      />
+                    </div>
+                    <div className="form-group" style={{ gridColumn: '1 / -1', marginBottom: 0 }}>
+                      <label>Short Summary <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(shown in the feed preview)</span></label>
+                      <textarea
+                        className="form-input"
+                        value={luSummary}
+                        onChange={e => setLuSummary(e.target.value)}
+                        placeholder="One or two sentence summary visible without expanding..."
+                        rows={2}
+                        style={{ margin: 0, resize: 'vertical' }}
+                      />
+                    </div>
+                    <div className="form-group" style={{ gridColumn: '1 / -1', marginBottom: 0 }}>
+                      <label>Full Details / Body <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(shown when reader clicks "Read more")</span></label>
+                      <textarea
+                        className="form-textarea"
+                        value={luContent}
+                        onChange={e => setLuContent(e.target.value)}
+                        placeholder="Write the full update details here. Separate paragraphs with a blank line."
+                        rows={8}
+                        style={{ resize: 'vertical', fontFamily: 'inherit', lineHeight: '1.7' }}
+                      />
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                    <button type="submit" className="btn-primary" style={{ width: 'auto' }} disabled={luSaving}>
+                      {luSaving ? 'Saving...' : (editingLiveId ? 'Save Changes' : 'Publish Update')}
+                    </button>
+                    <button type="button" className="btn-secondary" style={{ width: 'auto' }} onClick={() => setLuFormOpen(false)}>
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {/* Live updates table */}
+            <div style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '6px', boxShadow: 'var(--card-shadow)', overflow: 'hidden' }}>
+              <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>
+                  All Entries &nbsp;<span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>({liveUpdates.length})</span>
+                </span>
+                <button onClick={fetchLiveUpdates} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                  <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16"><path d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/></svg>
+                  Refresh
+                </button>
+              </div>
+
+              {liveLoading ? (
+                <div style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>Loading...</div>
+              ) : liveUpdates.length === 0 ? (
+                <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <p>No live updates yet. Click <strong>New Live Update</strong> to publish your first entry.</p>
+                </div>
+              ) : (
+                <div style={{ overflowX: 'auto' }}>
+                  <div style={{ maxHeight: liveUpdates.length > 6 ? '420px' : 'none', overflowY: liveUpdates.length > 6 ? 'auto' : 'visible' }}>
+                    <table className="admin-table" style={{ margin: 0, borderRadius: 0, border: 'none' }}>
+                      <thead style={{ position: liveUpdates.length > 6 ? 'sticky' : 'static', top: 0, zIndex: 1, backgroundColor: 'var(--bg-secondary)' }}>
+                        <tr>
+                          <th style={{ width: '44px', textAlign: 'center' }}>#</th>
+                          <th>Headline</th>
+                          <th style={{ width: '120px' }}>Category</th>
+                          <th style={{ width: '90px', textAlign: 'center' }}>Status</th>
+                          <th style={{ width: '140px' }}>Date</th>
+                          <th style={{ width: '110px', textAlign: 'right' }}>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {liveUpdates.map((item, idx) => (
+                          <tr key={item.id}>
+                            <td style={{ textAlign: 'center', color: 'var(--text-muted)', fontWeight: 600, fontSize: '0.8rem' }}>{idx + 1}</td>
+                            <td>
+                              <div style={{ fontWeight: 600, fontSize: '0.875rem', marginBottom: item.summary ? '0.2rem' : 0 }}>{item.title}</div>
+                              {item.summary && (
+                                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.summary}</div>
+                              )}
+                            </td>
+                            <td>
+                              <span style={{ fontSize: '0.72rem', fontWeight: 600, padding: '0.15rem 0.5rem', borderRadius: '3px', backgroundColor: 'rgba(197,160,89,0.12)', color: 'var(--accent-gold)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                {item.category}
+                              </span>
+                            </td>
+                            <td style={{ textAlign: 'center' }}>
+                              <button
+                                onClick={() => handleToggleLivePublish(item)}
+                                title={item.is_published ? 'Click to unpublish (set to Draft)' : 'Click to publish'}
+                                style={{
+                                  fontSize: '0.7rem', fontWeight: 700, padding: '0.2rem 0.55rem', borderRadius: '3px', border: 'none', cursor: 'pointer',
+                                  backgroundColor: item.is_published ? 'rgba(34,197,94,0.12)' : 'rgba(156,163,175,0.12)',
+                                  color: item.is_published ? '#16a34a' : '#6b7280'
+                                }}
+                              >
+                                {item.is_published ? 'Live' : 'Draft'}
+                              </button>
+                            </td>
+                            <td style={{ color: 'var(--text-secondary)', fontSize: '0.78rem' }}>
+                              {item.created_at ? new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                            </td>
+                            <td style={{ textAlign: 'right' }}>
+                              <div className="action-buttons" style={{ justifyContent: 'flex-end' }}>
+                                <button onClick={() => openEditLiveUpdate(item)} className="btn-action-edit" title="Edit">
+                                  <svg width="13" height="13" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708l-3-3zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207l6.5-6.5z"/>
+                                    <path d="M5.5 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.03l-.179.178a.5.5 0 0 0-.12.196l-.51 1.87a.5.5 0 0 0 .617.614l1.871-.51a.5.5 0 0 0 .196-.12l6.634-6.634z"/>
+                                  </svg>
+                                </button>
+                                <button onClick={() => handleDeleteLiveUpdate(item.id)} className="btn-action-delete" title="Delete">
+                                  <svg width="13" height="13" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                                    <path fillRule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                                  </svg>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+
+          </div>
+        )}
+
+        {/* TAB: ACCOUNT / CREDENTIALS */}
+        {activeTab === 'account' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', animation: 'modalSlideIn 0.2s ease', marginTop: '1rem', maxWidth: '560px' }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1rem' }}>Account Credentials</h3>
+              <p style={{ margin: '0.25rem 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                Change the username and password used to sign in to this admin panel. Currently signed in as{' '}
+                <strong style={{ color: 'var(--accent-gold)' }}>{adminUsername || '—'}</strong>.
+              </p>
+            </div>
+
+            <div style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '1.5rem', boxShadow: 'var(--card-shadow)' }}>
+              <form onSubmit={handleUpdateCredentials} autoComplete="off">
+                <div className="form-group">
+                  <label>New Username <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(leave blank to keep current)</span></label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={accNewUsername}
+                    onChange={e => setAccNewUsername(e.target.value)}
+                    placeholder={adminUsername || 'admin'}
+                    autoComplete="username"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>New Password <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(min 8 characters, leave blank to keep current)</span></label>
+                  <PasswordInput
+                    value={accNewPassword}
+                    onChange={e => setAccNewPassword(e.target.value)}
+                    placeholder="••••••••"
+                    autoComplete="new-password"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Confirm New Password</label>
+                  <PasswordInput
+                    value={accConfirmPassword}
+                    onChange={e => setAccConfirmPassword(e.target.value)}
+                    placeholder="••••••••"
+                    autoComplete="new-password"
+                  />
+                </div>
+
+                <hr style={{ border: 'none', borderTop: '1px solid var(--border-color)', margin: '1.25rem 0' }} />
+
+                <div className="form-group">
+                  <label>
+                    Current Password <span style={{ color: 'var(--accent-color)' }}>*</span>
+                    <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}> (required to confirm)</span>
+                  </label>
+                  <PasswordInput
+                    value={accCurrentPassword}
+                    onChange={e => setAccCurrentPassword(e.target.value)}
+                    placeholder="Enter your current password"
+                    autoComplete="current-password"
+                    required
+                  />
+                </div>
+
+                <button type="submit" className="btn-primary" style={{ width: 'auto', marginTop: '0.5rem' }} disabled={accSaving}>
+                  {accSaving ? 'Saving...' : 'Update Credentials'}
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 6: TOP HEADER SETTINGS (hidden) */}
         {false && (
           <div style={{ animation: 'modalSlideIn 0.2s ease' }}>
             <div className="category-manager-grid">
@@ -1590,51 +2631,60 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
                   </div>
                 </div>
 
-                {/* Image URL */}
+                {/* Article image (upload or URL) */}
                 <div className="form-group">
-                  <label htmlFor="form-image">Image URL / Path *</label>
-                  <input
-                    id="form-image"
-                    type="text"
-                    className="form-input"
-                    value={image}
-                    onChange={(e) => setImage(e.target.value)}
-                    placeholder="https://images.unsplash.com/... or /src/assets/..."
-                    required
-                  />
+                  <label>Article Image *</label>
+                  <ImageUploadField value={image} onChange={setImage} onToast={addToast} required />
                   <small style={{ color: 'var(--text-muted)', display: 'block', marginTop: '0.25rem' }}>
-                    Tip: Use absolute Unsplash image links for external photos, or local asset paths.
+                    Upload a JPG, PNG, GIF or WEBP (max 5 MB), or paste an image URL.
                   </small>
                 </div>
 
                 {/* Conditional fields for Videos & Podcasts */}
                 {category.toLowerCase() === 'videos & podcasts' && (
-                  <div className="form-grid-2" style={{ backgroundColor: 'var(--bg-secondary)', padding: '1rem', borderRadius: '4px', border: '1px solid var(--border-color)', marginBottom: '1.25rem' }}>
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label htmlFor="form-mediatype">Media Type *</label>
-                      <select
-                        id="form-mediatype"
-                        className="form-input"
-                        value={mediaType}
-                        onChange={(e) => setMediaType(e.target.value)}
-                        required
-                      >
-                        <option value="video">Video</option>
-                        <option value="podcast">Podcast</option>
-                      </select>
+                  <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '1rem', borderRadius: '4px', border: '1px solid var(--border-color)', marginBottom: '1.25rem' }}>
+                    <div className="form-grid-2" style={{ marginBottom: '1rem' }}>
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label htmlFor="form-mediatype">Media Type *</label>
+                        <select
+                          id="form-mediatype"
+                          className="form-input"
+                          value={mediaType}
+                          onChange={(e) => setMediaType(e.target.value)}
+                          required
+                        >
+                          <option value="video">Video</option>
+                          <option value="podcast">Podcast</option>
+                        </select>
+                      </div>
+
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label htmlFor="form-duration">Exact Length (e.g. MM:SS) *</label>
+                        <input
+                          id="form-duration"
+                          type="text"
+                          className="form-input"
+                          value={duration}
+                          onChange={(e) => setDuration(e.target.value)}
+                          placeholder="e.g. 15:40"
+                          required
+                        />
+                      </div>
                     </div>
 
                     <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label htmlFor="form-duration">Exact Length (e.g. MM:SS) *</label>
+                      <label htmlFor="form-mediaurl">YouTube Link / Video URL (Optional)</label>
                       <input
-                        id="form-duration"
-                        type="text"
+                        id="form-mediaurl"
+                        type="url"
                         className="form-input"
-                        value={duration}
-                        onChange={(e) => setDuration(e.target.value)}
-                        placeholder="e.g. 15:40"
-                        required
+                        value={mediaUrl}
+                        onChange={(e) => setMediaUrl(e.target.value)}
+                        placeholder="e.g. https://www.youtube.com/watch?v=dQw4w9WgXcQ"
                       />
+                      <small style={{ color: 'var(--text-muted)', display: 'block', marginTop: '0.25rem' }}>
+                        If provided, users can watch/listen to the video or podcast directly on the website.
+                      </small>
                     </div>
                   </div>
                 )}

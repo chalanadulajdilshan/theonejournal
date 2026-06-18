@@ -1,51 +1,128 @@
 import React, { useState, useEffect } from 'react';
+import logoImage from '../assets/logo.png';
 
-export default function TopHeader({ darkMode, toggleDarkMode }) {
+export default function TopHeader({ darkMode, toggleDarkMode, siteViews }) {
   const [currentDate, setCurrentDate] = useState('');
+  const [currentGmtTime, setCurrentGmtTime] = useState('');
+  const [tilt, setTilt] = useState({ x: 0, y: 0 });
+  const [shine, setShine] = useState({ x: 50, y: 50, opacity: 0 });
 
   useEffect(() => {
-    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    const dateStr = new Date().toLocaleDateString('en-US', options);
-    setCurrentDate(dateStr);
+    const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    
+    const updateTime = () => {
+      const now = new Date();
+      setCurrentDate(now.toLocaleDateString('en-US', dateOptions));
+      
+      const timeOptions = { 
+        hour: '2-digit', 
+        minute: '2-digit', 
+        timeZone: 'GMT',
+        timeZoneName: 'short'
+      };
+      setCurrentGmtTime(now.toLocaleTimeString('en-US', timeOptions));
+    };
+
+    updateTime();
+    const interval = setInterval(updateTime, 60000);
+    return () => clearInterval(interval);
   }, []);
 
-  const utilityLinks = [
-    { label: 'Emergencies', url: '#' },
-    { label: 'Jobs', url: '#' },
-    { label: 'Holiday', url: '#' },
-    { label: 'Banking', url: '#' },
-    { label: 'Visa', url: '#' },
-    { label: 'School', url: '#' },
-    { label: 'Global', url: '#' },
-  ];
+  const handleMouseMove = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    // Subtle premium 3D tilt
+    const tiltX = ((y / rect.height) - 0.5) * -12;
+    const tiltY = ((x / rect.width) - 0.5) * 12;
+    
+    // Dynamic shine position coordinates
+    const shineX = (x / rect.width) * 100;
+    const shineY = (y / rect.height) * 100;
+    
+    setTilt({ x: tiltX, y: tiltY });
+    setShine({ x: shineX, y: shineY, opacity: 0.55 });
+  };
+
+  const handleMouseLeave = () => {
+    setTilt({ x: 0, y: 0 });
+    setShine({ x: 50, y: 50, opacity: 0 });
+  };
+
+
 
   return (
     <>
+      {/* Brand Logo Area - Large Centered */}
+      <header className="brand-header">
+        <div className="header-container-full">
+          <div className="brand-header-inner-full">
+            <a 
+              href="/" 
+              className="brand-logo-interactive-link"
+              onMouseMove={handleMouseMove}
+              onMouseLeave={handleMouseLeave}
+              style={{
+                transform: `perspective(800px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
+                transition: 'transform 0.1s ease-out',
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <img 
+                src={logoImage} 
+                alt="The One Journal Logo" 
+                className="brand-logo-img-full"
+              />
+              <div 
+                className="logo-shine-overlay"
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: `radial-gradient(circle at ${shine.x}% ${shine.y}%, rgba(255,255,255,0.28) 0%, transparent 60%)`,
+                  opacity: shine.opacity,
+                  pointerEvents: 'none',
+                  transition: 'opacity 0.25s ease',
+                  mixBlendMode: 'overlay',
+                  borderRadius: '4px'
+                }}
+              />
+            </a>
+          </div>
+        </div>
+      </header>
+
       {/* Slim Top Utility Bar */}
       <div className="top-utility-bar">
         <div className="container">
-          <div className="utility-bar-inner">
-            <div className="utility-links hide-mobile">
-              {utilityLinks.map((link, idx) => (
-                <a key={idx} href={link.url}>
-                  {link.label}
-                </a>
-              ))}
+          <div className="utility-bar-inner" style={{ position: 'relative' }}>
+            <div className="utility-left hide-mobile">
+              <span className="site-views-pill" title="Total website views">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+                {siteViews === null
+                  ? '—'
+                  : `${siteViews.toLocaleString()} views`}
+              </span>
+            </div>
+            <div className="utility-center">
+              <span className="utility-date">{currentDate}</span>
+              <span className="utility-sep" style={{ margin: '0 10px', opacity: 0.5 }}>|</span>
+              <span className="utility-time">{currentGmtTime}</span>
             </div>
             <div className="utility-right">
-              <span className="utility-date hide-mobile">{currentDate}</span>
-              <span className="utility-sep hide-mobile">|</span>
               <div className="utility-edition">
                 <span className="edition-label">Edition:</span>
-                <span className="edition-value">UAE (EN)</span>
+                <span className="edition-value">International (EN)</span>
               </div>
-              <span className="utility-sep">|</span>
-              <a href="#admin" className="utility-admin-link">
-                <svg width="11" height="11" fill="currentColor" viewBox="0 0 16 16">
-                  <path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2zM5 8h6a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/>
-                </svg>
-                Admin
-              </a>
               <span className="utility-sep">|</span>
               <button
                 onClick={toggleDarkMode}
@@ -67,27 +144,6 @@ export default function TopHeader({ darkMode, toggleDarkMode }) {
           </div>
         </div>
       </div>
-
-      {/* Brand Logo Area - Large Centered */}
-      <header className="brand-header">
-        <div className="container">
-          <div className="brand-header-inner">
-            <a href="/" className="brand-logo-link">
-              <div className="brand-logo-icon">
-                <svg viewBox="0 0 24 24" width="38" height="38">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
-                </svg>
-              </div>
-              <h1 className="brand-title">
-                <span className="brand-the">THE</span>
-                <span className="brand-one">ONE</span>
-                <span className="brand-journal">JOURNAL</span>
-              </h1>
-            </a>
-            <p className="brand-tagline hide-mobile">Your Window to the World — Trusted News, Real Stories</p>
-          </div>
-        </div>
-      </header>
     </>
   );
 }

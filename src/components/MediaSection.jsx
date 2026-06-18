@@ -1,4 +1,5 @@
 import React from 'react';
+import ViewsBadge from './ViewsBadge';
 
 function MediaCard({ article, onClick }) {
   if (!article) return null;
@@ -39,9 +40,12 @@ function MediaCard({ article, onClick }) {
       </div>
       <div className="media-card-content">
         <h3 className="media-card-headline">{article.title}</h3>
-        <span className="text-accent bold" style={{fontSize: '0.7rem', textTransform: 'uppercase', marginTop: 'auto'}}>
-          {article.tag}
-        </span>
+        <div className="media-card-footer">
+          <span className="text-accent bold" style={{fontSize: '0.7rem', textTransform: 'uppercase'}}>
+            {article.tag}
+          </span>
+          <ViewsBadge views={article.views} showLabel={false} />
+        </div>
       </div>
     </div>
   );

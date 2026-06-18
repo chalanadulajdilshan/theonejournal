@@ -1,32 +1,37 @@
 import React, { useState } from 'react';
 
-export default function MainNavbar({ onSearchChange, searchVal }) {
+// The "Advertise With Us" menu links to dedicated marketing pages (not article
+// categories), so it stays static and is appended after the dynamic categories.
+const ADVERTISE_ITEM = {
+  name: 'Advertise With Us',
+  hash: '#advertise',
+  advertise: true,
+  subcategories: [
+    { name: 'Partner Content', hash: '#partner-content' },
+    { name: 'Display Banner Ads', hash: '#display-banner' },
+    { name: 'Social Media Promotion', hash: '#social-media' },
+    { name: 'Add-On Service', hash: '#add-on-service' },
+    { name: 'Rates & Pricing', hash: '#rates-pricing' },
+  ],
+};
+
+export default function MainNavbar({ onSearchChange, searchVal, categories: backendCategories }) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [activeMobileSub, setActiveMobileSub] = useState(null);
 
+  // Build the menu fully from the admin-managed categories & sub-tags,
+  // then append the static "Advertise With Us" marketing menu.
   const categories = [
-    {
-      name: 'UAE',
-      subcategories: ['Transport', 'Crime', 'Education', 'Legal', 'Weather']
-    },
-    {
-      name: 'World',
-      subcategories: ['GCC', 'Asia', 'Supplements']
-    },
-    {
-      name: 'Business',
-      subcategories: ['Program', 'Investing', 'Real Estate', 'Energy', 'Aviation', 'Leadership']
-    },
-    {
-      name: 'Tech',
-      subcategories: ['BTR']
-    },
-    {
-      name: 'Life',
-      subcategories: ['Sports', 'Entertainment', 'Food', 'Travel', 'Beauty & Health', 'Fashion']
-    },
-
+    ...(backendCategories || []).map((cat) => ({
+      name: cat.name,
+      hash: `#category-${cat.slug}`,
+      subcategories: (cat.subcategories || []).map((sub) => ({
+        name: sub.name,
+        hash: `#category-${cat.slug}`,
+      })),
+    })),
+    ADVERTISE_ITEM,
   ];
 
   const toggleSearch = () => {
@@ -50,11 +55,28 @@ export default function MainNavbar({ onSearchChange, searchVal }) {
 
   return (
     <div className="navbar-wrapper">
+      {/* Home link pinned to the far-left corner (desktop) */}
+      <a
+        href="/"
+        className="nav-home-btn hide-mobile"
+        aria-label="Home"
+        onClick={(e) => {
+          e.preventDefault();
+          onSearchChange('');
+          window.location.hash = '';
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+      >
+        <svg width="15" height="15" fill="currentColor" viewBox="0 0 16 16">
+          <path d="M8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4.5a.5.5 0 0 0 .5-.5v-4h2v4a.5.5 0 0 0 .5.5H14a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293L8.354 1.146zM2.5 14V7.707l5.5-5.5 5.5 5.5V14H10v-4a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5v4H2.5z" />
+        </svg>
+        Home
+      </a>
       <div className="container">
         <nav className="navbar-main">
           {/* Mobile hamburger on left */}
-          <button 
-            onClick={() => setIsMobileDrawerOpen(true)} 
+          <button
+            onClick={() => setIsMobileDrawerOpen(true)}
             className="mobile-menu-btn hide-desktop"
             aria-label="Open Menu"
           >
@@ -66,8 +88,8 @@ export default function MainNavbar({ onSearchChange, searchVal }) {
           {/* Desktop Categories Menu - Centered */}
           <ul className="nav-menu hide-mobile">
             {categories.map((cat, idx) => (
-              <li key={idx} className="nav-item">
-                <a href={`#section-${cat.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`} className="nav-link">
+              <li key={idx} className={`nav-item${cat.advertise ? ' advertise-item' : ''}`}>
+                <a href={cat.hash} className="nav-link">
                   {cat.name}
                   {cat.subcategories.length > 0 && (
                     <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" style={{marginLeft: '3px'}}>
@@ -75,12 +97,12 @@ export default function MainNavbar({ onSearchChange, searchVal }) {
                     </svg>
                   )}
                 </a>
-                
+
                 {cat.subcategories.length > 0 && (
                   <ul className="nav-dropdown">
                     {cat.subcategories.map((sub, subIdx) => (
                       <li key={subIdx}>
-                        <a href="#" className="dropdown-link">{sub}</a>
+                        <a href={sub.hash} className="dropdown-link">{sub.name}</a>
                       </li>
                     ))}
                   </ul>
@@ -89,10 +111,10 @@ export default function MainNavbar({ onSearchChange, searchVal }) {
             ))}
           </ul>
 
-          {/* Search Trigger */}
+          {/* Search Trigger + Back */}
           <div className="navbar-actions">
-            <button 
-              onClick={toggleSearch} 
+            <button
+              onClick={toggleSearch}
               className="search-trigger-btn"
               aria-label="Toggle Search"
               title="Search articles"
@@ -107,6 +129,21 @@ export default function MainNavbar({ onSearchChange, searchVal }) {
                 </svg>
               )}
             </button>
+
+            {/* Back to previous page (only on sub-pages, e.g. an article) */}
+            {window.location.hash && (
+              <button
+                onClick={() => { if (window.history.length > 1) window.history.back(); else { window.location.hash = ''; } }}
+                className="nav-back-btn"
+                aria-label="Go to previous page"
+                title="Go back"
+              >
+                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                </svg>
+                Back
+              </button>
+            )}
           </div>
         </nav>
       </div>
@@ -153,19 +190,13 @@ export default function MainNavbar({ onSearchChange, searchVal }) {
         <ul className="drawer-menu">
           {categories.map((cat, idx) => (
             <li key={idx} className="drawer-item">
-              <div 
-                className="drawer-link" 
+              <div
+                className="drawer-link"
                 onClick={() => cat.subcategories.length > 0 ? handleMobileSubToggle(idx) : setIsMobileDrawerOpen(false)}
               >
-                <a 
-                  href={`#section-${cat.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`}
-                  onClick={(e) => {
-                    if (cat.subcategories.length > 0) {
-                      e.preventDefault();
-                    } else {
-                      setIsMobileDrawerOpen(false);
-                    }
-                  }}
+                <a
+                  href={cat.hash}
+                  onClick={() => setIsMobileDrawerOpen(false)}
                 >
                   {cat.name}
                 </a>
@@ -182,7 +213,7 @@ export default function MainNavbar({ onSearchChange, searchVal }) {
                 <ul className="drawer-subcategories">
                   {cat.subcategories.map((sub, subIdx) => (
                     <li key={subIdx}>
-                      <a href="#" className="drawer-sub-link" onClick={() => setIsMobileDrawerOpen(false)}>{sub}</a>
+                      <a href={sub.hash} className="drawer-sub-link" onClick={() => setIsMobileDrawerOpen(false)}>{sub.name}</a>
                     </li>
                   ))}
                 </ul>

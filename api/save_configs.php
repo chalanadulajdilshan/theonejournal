@@ -5,10 +5,7 @@ require_once 'auth_helper.php';
 header('Content-Type: application/json');
 
 // Ensure user is authenticated as admin
-if (!isAuthenticated()) {
-    echo json_encode(['error' => 'Unauthorized']);
-    exit;
-}
+requireAdmin();
 
 // Only allow POST
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {

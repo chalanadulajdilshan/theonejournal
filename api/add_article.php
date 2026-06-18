@@ -29,6 +29,7 @@ $readTime = trim($input['readTime'] ?? '');
 $isSponsored = isset($input['isSponsored']) && $input['isSponsored'] ? 1 : 0;
 $mediaType = !empty($input['mediaType']) ? trim($input['mediaType']) : null;
 $duration = !empty($input['duration']) ? trim($input['duration']) : null;
+$mediaUrl = !empty($input['mediaUrl']) ? trim($input['mediaUrl']) : null;
 
 // Validation
 if (empty($title) || empty($excerpt) || empty($content) || empty($image) || empty($categoryId) || empty($subcategoryId) || empty($author)) {
@@ -45,8 +46,8 @@ $articleId = uniqid('art-');
 
 try {
     $stmt = $pdo->prepare("INSERT INTO articles 
-        (article_id, title, excerpt, content, image, category_id, subcategory_id, author, date, read_time, is_sponsored, media_type, duration)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        (article_id, title, excerpt, content, image, category_id, subcategory_id, author, date, read_time, is_sponsored, media_type, duration, media_url)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     
     $stmt->execute([
         $articleId,
@@ -61,7 +62,8 @@ try {
         $readTime ?: '3 min read',
         $isSponsored,
         $mediaType,
-        $duration
+        $duration,
+        $mediaUrl
     ]);
 
     echo json_encode([
@@ -80,7 +82,8 @@ try {
             'readTime' => $readTime ?: '3 min read',
             'isSponsored' => (bool)$isSponsored,
             'mediaType' => $mediaType,
-            'duration' => $duration
+            'duration' => $duration,
+            'mediaUrl' => $mediaUrl
         ]
     ]);
 } catch (\PDOException $e) {

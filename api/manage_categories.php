@@ -38,6 +38,13 @@ try {
                 echo json_encode(['error' => 'Category name is required.']);
                 exit;
             }
+            $dup = $pdo->prepare("SELECT id FROM categories WHERE name = ?");
+            $dup->execute([$name]);
+            if ($dup->fetch()) {
+                header('HTTP/1.1 409 Conflict');
+                echo json_encode(['error' => 'A category named "' . $name . '" already exists.']);
+                exit;
+            }
             $slug = slugify($name);
             $stmt = $pdo->prepare("INSERT INTO categories (name, slug) VALUES (?, ?)");
             $stmt->execute([$name, $slug]);
@@ -65,10 +72,14 @@ try {
                 echo json_encode(['error' => 'Category ID is required.']);
                 exit;
             }
-            // Delete category
-            $stmt = $pdo->prepare("DELETE FROM categories WHERE id = ?");
-            $stmt->execute([$id]);
-            echo json_encode(['success' => true, 'message' => 'Category deleted successfully.']);
+            // Articles require a valid category (NOT NULL + FK RESTRICT), so removing a
+            // category also removes its sub-tags and articles. Done atomically.
+            $pdo->beginTransaction();
+            $pdo->prepare("DELETE FROM articles WHERE category_id = ?")->execute([$id]);
+            $pdo->prepare("DELETE FROM subcategories WHERE category_id = ?")->execute([$id]);
+            $pdo->prepare("DELETE FROM categories WHERE id = ?")->execute([$id]);
+            $pdo->commit();
+            echo json_encode(['success' => true, 'message' => 'Category, its sub-tags, and articles deleted successfully.']);
             break;
 
         case 'add_subcategory':
@@ -77,6 +88,13 @@ try {
             if (empty($categoryId) || empty($name)) {
                 header('HTTP/1.1 400 Bad Request');
                 echo json_encode(['error' => 'Category ID and subcategory name are required.']);
+                exit;
+            }
+            $dup = $pdo->prepare("SELECT id FROM subcategories WHERE category_id = ? AND name = ?");
+            $dup->execute([$categoryId, $name]);
+            if ($dup->fetch()) {
+                header('HTTP/1.1 409 Conflict');
+                echo json_encode(['error' => 'A sub-tag named "' . $name . '" already exists in this category.']);
                 exit;
             }
             $slug = slugify($name);
@@ -106,9 +124,12 @@ try {
                 echo json_encode(['error' => 'Subcategory ID is required.']);
                 exit;
             }
-            $stmt = $pdo->prepare("DELETE FROM subcategories WHERE id = ?");
-            $stmt->execute([$id]);
-            echo json_encode(['success' => true, 'message' => 'Subcategory deleted successfully.']);
+            // Articles require a valid sub-tag, so removing it also removes its articles.
+            $pdo->beginTransaction();
+            $pdo->prepare("DELETE FROM articles WHERE subcategory_id = ?")->execute([$id]);
+            $pdo->prepare("DELETE FROM subcategories WHERE id = ?")->execute([$id]);
+            $pdo->commit();
+            echo json_encode(['success' => true, 'message' => 'Sub-tag and its articles deleted successfully.']);
             break;
 
         default:
@@ -117,6 +138,9 @@ try {
     }
 
 } catch (\PDOException $e) {
+    if ($pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
     header('HTTP/1.1 500 Internal Server Error');
     echo json_encode(['error' => 'Database operation failed: ' . $e->getMessage()]);
 }

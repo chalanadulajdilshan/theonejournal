@@ -1,20 +1,38 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 
 // Styles
-import './App.css'; // Will be cleared to prevent conflicts
+import './App.css';
 
 // Components
-import TopHeader from './components/TopHeader';
-import MainNavbar from './components/MainNavbar';
-import NewsTicker from './components/NewsTicker';
 import SectionHeader from './components/SectionHeader';
 import FeaturedCard from './components/FeaturedCard';
 import ArticleCard from './components/ArticleCard';
+import ViewsBadge from './components/ViewsBadge';
 import MediaSection from './components/MediaSection';
-import ArticleDetailModal from './components/ArticleDetailModal';
-import Footer from './components/Footer';
-import AdminPanel from './components/AdminPanel';
+import ArticlePage from './pages/ArticlePage';
 import CustomCursor from './components/CustomCursor';
+import Layout from './components/Layout';
+
+// Pages
+import AboutUs from './pages/AboutUs';
+import Advertise from './pages/Advertise';
+import Careers from './pages/Careers';
+import ContactUs from './pages/ContactUs';
+import Disclaimer from './pages/Disclaimer';
+import MeetOurTeam from './pages/MeetOurTeam';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsAndConditions from './pages/TermsAndConditions';
+import CategoryPage from './pages/CategoryPage';
+import LiveUpdates from './pages/LiveUpdates';
+import AddOnService from './pages/AddOnService';
+import RatesPricing from './pages/RatesPricing';
+import DisplayBanner from './pages/DisplayBanner';
+import PartnerContent from './pages/PartnerContent';
+import SocialMedia from './pages/SocialMedia';
+
+// Module-level guard so a single page load only registers one site view,
+// even though React StrictMode invokes mount effects twice in development.
+let siteViewCounted = false;
 
 export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -27,8 +45,24 @@ export default function App() {
 
   const [articles, setArticles] = useState(null);
   const [breakingNews, setBreakingNews] = useState([]);
+  const [liveUpdates, setLiveUpdates] = useState(null);
+  const [siteViews, setSiteViews] = useState(null);
+  const [categories, setCategories] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentHash, setCurrentHash] = useState(window.location.hash);
+
+  // Fetch the admin-managed categories & sub-tags that drive the navbar/sections
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch('/api/get_categories.php');
+      if (res.ok) {
+        const data = await res.json();
+        setCategories(Array.isArray(data) ? data : []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch categories:', err);
+    }
+  };
 
   const fetchBreakingNews = async () => {
     try {
@@ -40,6 +74,40 @@ export default function App() {
     } catch (err) {
       console.error('Failed to fetch breaking news:', err);
     }
+  };
+
+  // Register a site visit (POST) once per page load, then keep the total in state.
+  const registerSiteView = async () => {
+    try {
+      const res = await fetch('/api/site_views.php', { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        setSiteViews(data.views);
+      }
+    } catch (err) {
+      console.error('Failed to register site view:', err);
+    }
+  };
+
+  const fetchLiveUpdates = async () => {
+    try {
+      const res = await fetch('/api/get_live_updates.php?limit=10');
+      const data = await res.json();
+      setLiveUpdates(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setLiveUpdates([]);
+    }
+  };
+
+  const liveTimeAgo = (dateStr) => {
+    if (!dateStr) return '';
+    const diffMs = Date.now() - new Date(dateStr).getTime();
+    const diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 1) return 'Just Now';
+    if (diffMin < 60) return diffMin + 'm ago';
+    const diffHr = Math.floor(diffMin / 60);
+    if (diffHr < 24) return diffHr + 'h ago';
+    return Math.floor(diffHr / 24) + 'd ago';
   };
 
   // Handle dark mode side-effect
@@ -56,15 +124,6 @@ export default function App() {
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
   };
-
-  // Sync hash changes for routing
-  useEffect(() => {
-    const handleHashChange = () => {
-      setCurrentHash(window.location.hash);
-    };
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
-  }, []);
 
   // Fetch articles from the PHP API
   const fetchArticles = async () => {
@@ -83,6 +142,8 @@ export default function App() {
 
   const handleArticleClick = async (article) => {
     setSelectedArticle(article);
+    // Open the story as its own page (with header + footer)
+    window.location.hash = article && article.id ? `#article-${article.id}` : '#article';
     if (article && article.id) {
       try {
         await fetch('/api/click_article.php', {
@@ -97,25 +158,84 @@ export default function App() {
     }
   };
 
+  // Open a live update as a full page and record its view count
+  const handleLiveUpdateClick = (item) => {
+    if (item && item.id) {
+      fetch('/api/click_live_update.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: item.id })
+      }).then(() => fetchLiveUpdates()).catch(() => {});
+    }
+    handleArticleClick({
+      title: item.title,
+      excerpt: item.summary || item.title,
+      content: item.content || item.summary || 'Stay tuned for more details as this story develops.',
+      tag: 'LIVE UPDATE',
+      readTime: '1 min read',
+      date: new Date(item.created_at).toLocaleDateString(),
+      author: item.author || 'Editorial Team',
+      image: item.image || 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=800&auto=format&fit=crop',
+      category: item.category
+    });
+  };
+
   useEffect(() => {
     fetchArticles();
     fetchBreakingNews();
+    fetchLiveUpdates();
+    fetchCategories();
+
+    // Count this visit only once per real page load (StrictMode-safe).
+    if (!siteViewCounted) {
+      siteViewCounted = true;
+      registerSiteView();
+    }
+
+    // Listen for hash changes to navigate between pages
+    const handleHashChange = () => {
+      setCurrentHash(window.location.hash);
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
-  // Compile all articles for global search capability
-  const allArticlesList = articles ? [
-    ...(articles.partnerContent || []),
-    ...(articles.videosAndPodcasts || []),
-    ...(articles.youMayLike || []),
-    ...(articles.world || []),
-    ...(articles.business || []),
-    ...(articles.tech || []),
-    ...(articles.life || [])
-  ] : [];
+  // Handle scrolling when hash changes
+  useEffect(() => {
+    const pageRoutes = [
+      '#about-us', '#advertise', '#careers', '#contact-us',
+      '#disclaimer', '#meet-our-team', '#privacy-policy', '#terms-and-conditions',
+      '#live-updates', '#add-on-service', '#rates-pricing', '#display-banner', '#partner-content', '#social-media'
+    ];
+
+    if (pageRoutes.includes(currentHash) || currentHash.startsWith('#category-')) {
+      window.scrollTo(0, 0);
+    } else if (currentHash && currentHash.startsWith('#section-')) {
+      // Smooth scroll to the section after render
+      setTimeout(() => {
+        const element = document.getElementById(currentHash.replace('#', ''));
+        if (element) {
+          // Calculate offset to prevent header from hiding the section title
+          const headerOffset = 180; 
+          const elementPosition = element.getBoundingClientRect().top;
+          const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+          window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
+        }
+      }, 100);
+    } else if (currentHash === '') {
+      window.scrollTo(0, 0);
+    }
+  }, [currentHash]);
+
+  // Deduplicated flat list of every article across all category groups
+  // (includes any newly-added admin categories, e.g. "cars")
+  const flatArticles = articles
+    ? Object.values(articles).flat().filter((a, i, arr) => arr.findIndex(x => x.id === a.id) === i)
+    : [];
 
   // Filtering articles based on query
   const searchResults = searchQuery
-    ? allArticlesList.filter(article =>
+    ? flatArticles.filter(article =>
         article.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         article.excerpt.toLowerCase().includes(searchQuery.toLowerCase()) ||
         article.tag.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -131,25 +251,72 @@ export default function App() {
     return { featured, gridItems };
   };
 
-  // Render Admin Panel View if hash matches
-  if (currentHash === '#admin') {
-    return (
-      <>
-        <CustomCursor />
-        <AdminPanel 
-          articles={articles} 
-          onRefreshArticles={fetchArticles} 
-          breakingNews={breakingNews}
-          onRefreshBreaking={fetchBreakingNews}
-          darkMode={darkMode}
-          toggleDarkMode={toggleDarkMode}
-        />
-      </>
-    );
+  // Helper to get exactly 3 articles for the "You May Like" grid
+  const getYouMayLikeArticles = () => {
+    if (!articles) return [];
+    const dynamicList = articles.youMayLike || [];
+    const fallbacks = [
+      ...(articles.world || []),
+      ...(articles.business || []),
+      ...(articles.tech || []),
+      ...(articles.life || [])
+    ];
+    const result = [...dynamicList];
+    for (const art of fallbacks) {
+      if (result.length >= 6) break;
+      if (!result.some(r => r.id === art.id)) {
+        result.push(art);
+      }
+    }
+    return result.slice(0, 6);
+  };
+
+  // Articles belonging to a given admin category (matched by id)
+  const articlesForCategory = (cat) => flatArticles.filter(a => a.categoryId === cat.id);
+
+  // Categories that get their own homepage "story" section. The special ones
+  // (You May Like, Partner Content, Videos & Podcasts) have dedicated sections.
+  const SPECIAL_SECTION_SLUGS = ['partner-content', 'videos-podcasts', 'you-may-like'];
+  const storyCategories = categories.filter(c => !SPECIAL_SECTION_SLUGS.includes(c.slug));
+
+  // "You May Like" is an auto-generated view-count feed, not a browsable
+  // category, so it is hidden from the navbar menu.
+  const navCategories = categories.filter(c => c.slug !== 'you-may-like');
+
+  // Prepare layout props for page components
+  const layoutProps = {
+    darkMode,
+    toggleDarkMode,
+    searchVal: searchQuery,
+    onSearchChange: setSearchQuery,
+    tickerItems: breakingNews,
+    onArticleClick: handleArticleClick,
+    siteViews,
+    categories: navCategories
+  };
+
+  // Render Static Pages
+  switch (currentHash) {
+    case '#about-us': return <AboutUs layoutProps={layoutProps} />;
+    case '#advertise': return <Advertise layoutProps={layoutProps} />;
+    case '#careers': return <Careers layoutProps={layoutProps} />;
+    case '#contact-us': return <ContactUs layoutProps={layoutProps} />;
+    case '#disclaimer': return <Disclaimer layoutProps={layoutProps} />;
+    case '#meet-our-team': return <MeetOurTeam layoutProps={layoutProps} />;
+    case '#privacy-policy': return <PrivacyPolicy layoutProps={layoutProps} />;
+    case '#terms-and-conditions': return <TermsAndConditions layoutProps={layoutProps} />;
+    case '#live-updates': return <LiveUpdates layoutProps={layoutProps} />;
+    case '#add-on-service': return <AddOnService layoutProps={layoutProps} />;
+    case '#rates-pricing': return <RatesPricing layoutProps={layoutProps} />;
+    case '#display-banner': return <DisplayBanner layoutProps={layoutProps} />;
+    case '#partner-content': return <PartnerContent layoutProps={layoutProps} />;
+    case '#social-media': return <SocialMedia layoutProps={layoutProps} />;
+
+    default: break; // Continue to main app view if no route matched
   }
 
-  // Render Loading Screen if fetching initial data
-  if (isLoading) {
+  // Render Loading Screen if fetching initial data OR articles failed to load
+  if (isLoading || !articles) {
     return (
       <div style={{
         display: 'flex',
@@ -173,22 +340,55 @@ export default function App() {
     );
   }
 
+  // Full article page: clicking any news opens it as its own page.
+  if (currentHash.startsWith('#article')) {
+    let art = selectedArticle;
+    if (!art && currentHash.startsWith('#article-')) {
+      const id = currentHash.replace('#article-', '');
+      art = flatArticles.find(a => String(a.id) === id);
+    }
+    return <ArticlePage layoutProps={layoutProps} article={art} />;
+  }
+
+  // Dynamic category page: any #category-<slug> is resolved against the
+  // admin-managed categories and its articles are filtered from the feed.
+  if (currentHash.startsWith('#category-')) {
+    const slug = currentHash.replace('#category-', '');
+    // Aliases keep older homepage "View All" links working
+    const aliasMap = {
+      videos: 'videos-podcasts',
+      partner: 'partner-content',
+      international: 'you-may-like',
+      uae: 'you-may-like'
+    };
+    const realSlug = aliasMap[slug] || slug;
+    const cat = categories.find(c => c.slug === realSlug);
+    const list = cat ? articlesForCategory(cat) : [];
+    return (
+      <CategoryPage
+        layoutProps={layoutProps}
+        title={cat ? cat.name : 'Category'}
+        articlesList={list}
+        onArticleClick={handleArticleClick}
+      />
+    );
+  }
+
   return (
     <div className="app-root">
       <CustomCursor />
-      {/* 1. Top Utility Header */}
-      <TopHeader darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
-
-      {/* 2. Main Navigation Menu */}
-      <MainNavbar onSearchChange={setSearchQuery} searchVal={searchQuery} />
-
-      {/* Breaking News Ticker */}
-      <NewsTicker 
-        tickerItems={breakingNews} 
-        onArticleClick={handleArticleClick} 
-      />
-
-      <main className="container" style={{ minHeight: '60vh', marginTop: '1.5rem' }}>
+      
+      <Layout
+        darkMode={darkMode}
+        toggleDarkMode={toggleDarkMode}
+        searchVal={searchQuery}
+        onSearchChange={setSearchQuery}
+        tickerItems={breakingNews}
+        onArticleClick={handleArticleClick}
+        siteViews={siteViews}
+        categories={navCategories}
+      >
+        <div className="container" style={{ minHeight: '60vh', marginTop: '1.5rem' }}>
         {searchQuery ? (
           /* Search Results View */
           <div className="home-section">
@@ -224,69 +424,123 @@ export default function App() {
           /* Main Homepage Sections Layout */
           <div className="main-layout">
             
-            {/* SECTION 1: Partner Content (UAE) */}
-            <section className="home-section" id="section-uae">
-              <SectionHeader title="Partner Content (UAE)" id="partner-content" />
-              {(() => {
-                const { featured, gridItems } = getStorySplit(articles.partnerContent);
-                return (
-                  <div className="grid-5-stories">
-                    <div className="featured-column">
-                      <FeaturedCard article={featured} onClick={handleArticleClick} />
-                    </div>
-                    <div className="grid-column-2x2">
-                      {gridItems.map((art) => (
-                        <ArticleCard key={art.id} article={art} onClick={handleArticleClick} />
-                      ))}
+            {/* 1. TOP SPLIT SECTION: You May Like & Live Feature Path */}
+            <div id="section-you-may-like" className="you-may-like-live-split">
+              {/* Left Column: You May Like (2/3 width) */}
+              <div className="you-may-like-column">
+                <SectionHeader title="You May Like" id="you-may-like" viewAllLink="#category-uae" />
+                <div className="you-may-like-grid-3">
+                  {getYouMayLikeArticles().map((art) => (
+                    <ArticleCard key={art.id} article={art} onClick={handleArticleClick} />
+                  ))}
+                </div>
+              </div>
+
+              {/* Right Column: Live Feature Path (1/3 width) */}
+              <div className="live-feature-column">
+                <div className="live-feature-card">
+                  <div className="live-feature-header">
+                    <span className="live-feature-title">Live Updates</span>
+                    <div className="live-badge">
+                      <span className="live-dot"></span>
+                      Live
                     </div>
                   </div>
-                );
-              })()}
-            </section>
+                  {liveUpdates === null ? (
+                    /* Loading skeleton */
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: '0.5rem 0' }}>
+                      {[1,2,3].map(i => (
+                        <div key={i} style={{ height: i === 1 ? '180px' : '52px', borderRadius: '6px', background: 'linear-gradient(90deg, var(--bg-secondary) 25%, var(--bg-primary) 50%, var(--bg-secondary) 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite' }} />
+                      ))}
+                      <style>{`@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }`}</style>
+                    </div>
+                  ) : liveUpdates.length > 0 ? (
+                    <>
+                      {/* Featured visual card for the latest live update */}
+                      {(() => {
+                        const latest = liveUpdates[0];
+                        const featuredImage = latest.image || "https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=800&auto=format&fit=crop";
+                        return (
+                          <div
+                            className="live-featured-card"
+                            onClick={() => handleLiveUpdateClick(latest)}
+                          >
+                            <div className="live-featured-img-wrapper">
+                              <img src={featuredImage} alt={latest.title} className="live-featured-img" />
+                              <span className="live-featured-badge">{liveTimeAgo(latest.created_at)}</span>
+                              <span className="live-featured-tag">{latest.category || 'Breaking'}</span>
+                            </div>
+                            <h4 className="live-featured-title">{latest.title}</h4>
+                            <div style={{ marginTop: '0.4rem' }}>
+                              <ViewsBadge views={latest.views_count} />
+                            </div>
+                          </div>
+                        );
+                      })()}
 
-            {/* SECTION 2: Videos & Podcasts */}
+                      {/* Remaining timeline items */}
+                      <div className="live-timeline">
+                        {liveUpdates.slice(1, 5).map((item) => (
+                          <div key={item.id} className="live-timeline-item">
+                            <div className="live-timeline-node"></div>
+                            <span className="live-time-badge">{liveTimeAgo(item.created_at)}</span>
+                            <div
+                              className="live-title"
+                              onClick={() => handleLiveUpdateClick(item)}
+                            >
+                              {item.title}
+                            </div>
+                            <div style={{ marginTop: '0.35rem' }}>
+                              <ViewsBadge views={item.views_count} showLabel={false} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center', padding: '2rem 0' }}>
+                      No live updates at this moment.
+                    </div>
+                  )}
+
+                </div>
+              </div>
+            </div>
+
+            {/* 2. PARTNER CONTENT (Grid) */}
+            {articles.partnerContent && articles.partnerContent.length > 0 && (
+              <section className="home-section" id="section-partner-content">
+                <SectionHeader title="PARTNER CONTENT" id="partner-content" viewAllLink="#category-partner" />
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem' }}>
+                  {articles.partnerContent.slice(0, 4).map((art) => (
+                    <ArticleCard 
+                      key={art.id} 
+                      article={{...art, tag: art.tag || 'SPONSORED'}} 
+                      onClick={handleArticleClick} 
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* 3. VIDEOS & PODCASTS */}
             <section className="home-section" id="section-videos-&-podcasts">
-              <SectionHeader title="Videos & Podcasts" id="videos-podcasts" />
+              <SectionHeader title="Videos & Podcasts" id="videos-podcasts" viewAllLink="#category-videos" />
               <MediaSection 
                 articles={articles.videosAndPodcasts || []} 
                 onArticleClick={handleArticleClick} 
               />
             </section>
 
-            {/* SECTION 3: You May Like */}
-            <section className="home-section" id="section-you-may-like">
-              <SectionHeader title="You May Like" id="you-may-like" />
-              {(() => {
-                const { featured, gridItems } = getStorySplit(articles.youMayLike);
-                return (
-                  <div className="grid-you-may-like">
-                    <div className="featured-column">
-                      <FeaturedCard article={featured} onClick={handleArticleClick} />
-                    </div>
-                    <div className="trending-list-column">
-                      {gridItems.map((art, idx) => (
-                        <div key={art.id} className="trending-list-card" onClick={() => handleArticleClick(art)}>
-                          <span className="trending-number">0{idx + 2}</span>
-                          <div className="trending-card-content">
-                            <h4 className="trending-headline">{art.title}</h4>
-                            <span className="text-muted" style={{ fontSize: '0.7rem', fontWeight: 600 }}>
-                              {art.tag} &bull; {art.readTime}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
-            </section>
-
-            {/* SECTION 4: World */}
-            <section className="home-section" id="section-world">
-              <SectionHeader title="World" id="world" />
-              {(() => {
-                const { featured, gridItems } = getStorySplit(articles.world);
-                return (
+            {/* Category story sections — driven by the admin categories so
+                they always match the news details set in the admin panel */}
+            {storyCategories.map((cat) => {
+              const list = articlesForCategory(cat);
+              if (list.length === 0) return null;
+              const { featured, gridItems } = getStorySplit(list);
+              return (
+                <section className="home-section" id={`section-${cat.slug}`} key={cat.id}>
+                  <SectionHeader title={cat.name} id={cat.slug} viewAllLink={`#category-${cat.slug}`} />
                   <div className="grid-5-stories">
                     <div className="featured-column">
                       <FeaturedCard article={featured} onClick={handleArticleClick} />
@@ -297,84 +551,26 @@ export default function App() {
                       ))}
                     </div>
                   </div>
-                );
-              })()}
-            </section>
+                </section>
+              );
+            })}
 
-            {/* SECTION 5: Business */}
-            <section className="home-section" id="section-business">
-              <SectionHeader title="Business" id="business" />
-              {(() => {
-                const { featured, gridItems } = getStorySplit(articles.business);
-                return (
-                  <div className="grid-5-stories">
-                    <div className="featured-column">
-                      <FeaturedCard article={featured} onClick={handleArticleClick} />
-                    </div>
-                    <div className="grid-column-2x2">
-                      {gridItems.map((art) => (
-                        <ArticleCard key={art.id} article={art} onClick={handleArticleClick} />
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
-            </section>
-
-            {/* SECTION 6: Tech */}
-            <section className="home-section" id="section-tech">
-              <SectionHeader title="Tech" id="tech" />
-              {(() => {
-                const { featured, gridItems } = getStorySplit(articles.tech);
-                return (
-                  <div className="grid-5-stories">
-                    <div className="featured-column">
-                      <FeaturedCard article={featured} onClick={handleArticleClick} />
-                    </div>
-                    <div className="grid-column-2x2">
-                      {gridItems.map((art) => (
-                        <ArticleCard key={art.id} article={art} onClick={handleArticleClick} />
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
-            </section>
-
-            {/* SECTION 7: Life */}
-            <section className="home-section" id="section-life">
-              <SectionHeader title="Life" id="life" />
-              {(() => {
-                const { featured, gridItems } = getStorySplit(articles.life);
-                return (
-                  <div className="grid-5-stories">
-                    <div className="featured-column">
-                      <FeaturedCard article={featured} onClick={handleArticleClick} />
-                    </div>
-                    <div className="grid-column-2x2">
-                      {gridItems.map((art) => (
-                        <ArticleCard key={art.id} article={art} onClick={handleArticleClick} />
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
-            </section>
+            {/* 9. BOTTOM PARTNER CONTENT */}
+            {articles.partnerContent && articles.partnerContent.length > 1 && (
+              <section className="home-section" id="section-partner-content">
+                <SectionHeader title="Partner Content" id="partner-content-bottom" viewAllLink="#category-partner" />
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.5rem', marginTop: '1.5rem' }}>
+                  {articles.partnerContent.slice(1).map((art) => (
+                    <ArticleCard key={art.id} article={art} onClick={handleArticleClick} />
+                  ))}
+                </div>
+              </section>
+            )}
 
           </div>
         )}
-      </main>
-
-      {/* 4. Footer */}
-      <Footer />
-
-      {/* 5. Article Detail Overlay Modal */}
-      {selectedArticle && (
-        <ArticleDetailModal 
-          article={selectedArticle} 
-          onClose={() => setSelectedArticle(null)} 
-        />
-      )}
+        </div>
+      </Layout>
     </div>
   );
 }

@@ -1,5 +1,3 @@
-import travelOman from '../assets/travel_oman.png';
-import footballWin from '../assets/football_win.png';
 
 export const mockArticles = {
   partnerContent: [
@@ -411,7 +409,7 @@ export const mockArticles = {
       title: "Travel: The Ultimate Guide to Exploring the Pristine Coastlines of Oman",
       excerpt: "From secluded white-sand beaches to crystal-clear wadis, here is your itinerary for the perfect road trip.",
       content: "Oman's diverse coastline offers some of the most spectacular, untouched natural landscapes in the Middle East. Our travel writers mapped out the perfect seven-day road trip. Discover remote fishing villages, swim in natural sinkholes, and enjoy overnight camping under the stars in the desert dunes. We cover essential safety tips, driving routes, and the best local eateries.",
-      image: travelOman,
+      image: "https://images.unsplash.com/photo-1618083707368-b3823daa2726?q=80&w=800&auto=format&fit=crop",
       category: "Life",
       tag: "Travel",
       author: "Travel Editor",
@@ -423,7 +421,7 @@ export const mockArticles = {
       title: "Sports: Local Football Club Secures Dramatic Win in Continental Championship",
       excerpt: "A last-minute penalty kick sends the stadium into celebration as the team clinches the trophy.",
       content: "The local football team completed a historic sporting achievement last night, clinching the continental trophy in a nail-biting final. After playing to a 1-1 draw during regular time, a penalty kick in the 93rd minute sealed the victory. The manager praised the squad's resilience, while thousands of fans celebrated in the streets until the early hours.",
-      image: footballWin,
+      image: "https://images.unsplash.com/photo-1518063319789-7217e6706b04?q=80&w=800&auto=format&fit=crop",
       category: "Life",
       tag: "Sports",
       author: "Sports Writer",

@@ -88,6 +88,13 @@
   box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.15);
 }
 
+/* Hide native browser password reveal/clear icons so they don't overlap the
+   custom show/hide toggle button. */
+.form-input::-ms-reveal,
+.form-input::-ms-clear {
+  display: none;
+}
+
 .btn-primary {
   width: 100%;
   padding: 0.75rem 1.5rem;

@@ -31,6 +31,7 @@ $readTime = trim($input['readTime'] ?? '');
 $isSponsored = isset($input['isSponsored']) && $input['isSponsored'] ? 1 : 0;
 $mediaType = !empty($input['mediaType']) ? trim($input['mediaType']) : null;
 $duration = !empty($input['duration']) ? trim($input['duration']) : null;
+$mediaUrl = !empty($input['mediaUrl']) ? trim($input['mediaUrl']) : null;
 
 // Validation
 if (empty($articleId)) {
@@ -74,7 +75,8 @@ try {
         read_time = ?, 
         is_sponsored = ?, 
         media_type = ?, 
-        duration = ?
+        duration = ?,
+        media_url = ?
         WHERE article_id = ?");
     
     $stmtUpdate->execute([
@@ -90,6 +92,7 @@ try {
         $isSponsored,
         $mediaType,
         $duration,
+        $mediaUrl,
         $articleId
     ]);
 
@@ -109,7 +112,8 @@ try {
             'readTime' => $readTime ?: '3 min read',
             'isSponsored' => (bool)$isSponsored,
             'mediaType' => $mediaType,
-            'duration' => $duration
+            'duration' => $duration,
+            'mediaUrl' => $mediaUrl
         ]
     ]);
 } catch (\PDOException $e) {

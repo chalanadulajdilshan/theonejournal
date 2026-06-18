@@ -20,7 +20,8 @@ function mapRowToArticle($row) {
         'author' => $row['author'],
         'date' => $row['date'],
         'readTime' => $row['read_time'],
-        'isSponsored' => (bool)$row['is_sponsored']
+        'isSponsored' => (bool)$row['is_sponsored'],
+        'views' => intval($row['views_count'] ?? 0)
     ];
 
     if ($row['media_type'] !== null) {
@@ -28,6 +29,9 @@ function mapRowToArticle($row) {
     }
     if ($row['duration'] !== null) {
         $article['duration'] = $row['duration'];
+    }
+    if (isset($row['media_url']) && $row['media_url'] !== null) {
+        $article['mediaUrl'] = $row['media_url'];
     }
     return $article;
 }
@@ -42,7 +46,7 @@ try {
         FROM articles a
         JOIN categories c ON a.category_id = c.id
         JOIN subcategories s ON a.subcategory_id = s.id
-        ORDER BY a.id DESC
+        ORDER BY a.sort_order ASC, a.id DESC
     ");
     $dbArticles = $stmt->fetchAll();
 

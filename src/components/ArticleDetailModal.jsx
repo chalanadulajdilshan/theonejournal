@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
 
+const getYouTubeId = (url) => {
+  if (!url) return null;
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+  const match = url.match(regExp);
+  return (match && match[2].length === 11) ? match[2] : null;
+};
+
 export default function ArticleDetailModal({ article, onClose }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -54,7 +61,20 @@ export default function ArticleDetailModal({ article, onClose }) {
         </button>
 
         {/* Media or Banner Image */}
-        {article.mediaType ? (
+        {article.mediaUrl && getYouTubeId(article.mediaUrl) ? (
+          <div className="modal-video-container">
+            <iframe
+              width="100%"
+              height="100%"
+              src={`https://www.youtube.com/embed/${getYouTubeId(article.mediaUrl)}?autoplay=1`}
+              title={article.title}
+              frameBorder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+              style={{ border: 'none', position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+            ></iframe>
+          </div>
+        ) : article.mediaType ? (
           <div className="modal-video-container">
             {article.mediaType === 'video' ? (
               <div className="modal-mock-video">
