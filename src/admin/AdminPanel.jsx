@@ -137,6 +137,19 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
 
   const LU_CATEGORIES = ['General', 'Politics', 'Business', 'Technology', 'Sports', 'Entertainment', 'Health', 'International'];
 
+  // Jobs Manager state
+  const [jobs, setJobs] = useState([]);
+  const [jobsLoading, setJobsLoading] = useState(false);
+  const [editingJobId, setEditingJobId] = useState(null);
+  const [jobTitle, setJobTitle] = useState('');
+  const [jobImage, setJobImage] = useState('');
+  const [jobDescription, setJobDescription] = useState('');
+  const [jobPublished, setJobPublished] = useState(true);
+  const [jobFormOpen, setJobFormOpen] = useState(false);
+  const [jobSaving, setJobSaving] = useState(false);
+  const [jobDragIndex, setJobDragIndex] = useState(null);
+  const [jobDragOverIndex, setJobDragOverIndex] = useState(null);
+
   // Account / Credentials Manager state
   const [accNewUsername, setAccNewUsername] = useState('');
   const [accNewPassword, setAccNewPassword] = useState('');
@@ -1160,6 +1173,154 @@ By using The One Journal, you acknowledge that you have read and agreed to these
     });
   };
 
+  // JOBS CRUD HANDLERS
+  const fetchJobs = async () => {
+    setJobsLoading(true);
+    try {
+      const res = await fetch('/api/manage_jobs.php');
+      const data = await res.json();
+      setJobs(Array.isArray(data) ? data : []);
+    } catch (err) {
+      addToast('Failed to load jobs.', 'error');
+    } finally {
+      setJobsLoading(false);
+    }
+  };
+
+  const openAddJob = () => {
+    setEditingJobId(null);
+    setJobTitle('');
+    setJobImage('');
+    setJobDescription('');
+    setJobPublished(true);
+    setJobFormOpen(true);
+  };
+
+  const openEditJob = (item) => {
+    setEditingJobId(item.id);
+    setJobTitle(item.title);
+    setJobImage(item.image || '');
+    setJobDescription(item.description || '');
+    setJobPublished(item.is_published === 1 || item.is_published === true);
+    setJobFormOpen(true);
+  };
+
+  const handleSaveJob = async (e) => {
+    e.preventDefault();
+    if (!jobTitle.trim()) return;
+    setJobSaving(true);
+    const action = editingJobId ? 'edit' : 'add';
+    const payload = {
+      action,
+      title: jobTitle,
+      image: jobImage,
+      description: jobDescription,
+      is_published: jobPublished ? 1 : 0
+    };
+    if (editingJobId) payload.id = editingJobId;
+    try {
+      const res = await fetch('/api/manage_jobs.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) {
+        addToast(editingJobId ? 'Job saved.' : 'Job published.', 'success');
+        setJobFormOpen(false);
+        fetchJobs();
+      } else {
+        addToast(data.error || 'Failed to save.', 'error');
+      }
+    } catch (err) {
+      addToast('Request failed.', 'error');
+    } finally {
+      setJobSaving(false);
+    }
+  };
+
+  const handleToggleJobPublish = async (item) => {
+    const newVal = item.is_published ? 0 : 1;
+    try {
+      const res = await fetch('/api/manage_jobs.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'toggle_publish', id: item.id, is_published: newVal })
+      });
+      const data = await res.json();
+      if (data.success) {
+        addToast(newVal ? 'Published.' : 'Set to draft.', 'success');
+        fetchJobs();
+      }
+    } catch (err) {
+      addToast('Request failed.', 'error');
+    }
+  };
+
+  const handleDeleteJob = (id) => {
+    Swal.fire({
+      title: 'Delete Job?',
+      text: 'This job listing will be permanently removed from the website.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d12128',
+      cancelButtonColor: '#7a7a7a',
+      confirmButtonText: 'Yes, delete it!',
+      background: document.body.classList.contains('dark-mode') ? '#1e293b' : '#ffffff',
+      color: document.body.classList.contains('dark-mode') ? '#f8fafc' : '#121212',
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          const res = await fetch('/api/manage_jobs.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'delete', id })
+          });
+          const data = await res.json();
+          if (data.success) {
+            addToast('Job deleted.', 'success');
+            fetchJobs();
+          } else {
+            addToast(data.error || 'Failed to delete.', 'error');
+          }
+        } catch (err) {
+          addToast('Request failed.', 'error');
+        }
+      }
+    });
+  };
+
+  const saveJobOrder = async (newOrderIds) => {
+    try {
+      const res = await fetch('/api/manage_jobs.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reorder', order: newOrderIds })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        addToast('Job order updated — now live on the website.', 'success');
+        fetchJobs();
+      } else {
+        addToast(data.error || 'Failed to reorder.', 'error');
+      }
+    } catch (err) {
+      addToast('Network connection failed.', 'error');
+    }
+  };
+
+  const handleJobDrop = (dropIndex) => {
+    const fromIndex = jobDragIndex;
+    setJobDragIndex(null);
+    setJobDragOverIndex(null);
+    if (fromIndex === null || fromIndex === dropIndex) return;
+    const list = [...jobs];
+    const [moved] = list.splice(fromIndex, 1);
+    list.splice(dropIndex, 0, moved);
+    setJobs(list);
+    saveJobOrder(list.map(j => j.id));
+  };
+
   // ACCOUNT / CREDENTIALS HANDLER
   const handleUpdateCredentials = async (e) => {
     e.preventDefault();
@@ -1589,6 +1750,24 @@ By using The One Journal, you acknowledge that you have read and agreed to these
             }}
           >
             Pages Manager
+          </button>
+          <button
+            onClick={() => { setActiveTab('jobs'); fetchJobs(); }}
+            className={`semibold`}
+            style={{
+              background: 'none',
+              border: 'none',
+              borderBottom: activeTab === 'jobs' ? '3px solid var(--accent-gold)' : '3px solid transparent',
+              color: activeTab === 'jobs' ? 'var(--text-primary)' : 'var(--text-muted)',
+              padding: '0.75rem 1.5rem',
+              cursor: 'pointer',
+              fontSize: '0.95rem',
+              outline: 'none',
+              transition: 'all var(--transition-fast)',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            Jobs Manager
           </button>
           <button
             onClick={() => { setActiveTab('liveupdates'); fetchLiveUpdates(); }}
@@ -2218,6 +2397,189 @@ By using The One Journal, you acknowledge that you have read and agreed to these
         )}
 
         {/* TAB 5: LIVE UPDATES MANAGER */}
+        {activeTab === 'jobs' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', animation: 'modalSlideIn 0.2s ease', marginTop: '1rem' }}>
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1rem' }}>Job Openings</h3>
+                <p style={{ margin: '0.25rem 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  Published jobs appear live on{' '}
+                  <a href="#jobs" target="_blank" rel="noreferrer" style={{ color: 'var(--accent-gold)' }}>theonejournal.com/jobs</a>
+                  {' '}— drag rows to reorder; the new order goes live immediately.
+                </p>
+              </div>
+              <button
+                onClick={openAddJob}
+                className="btn-primary"
+                style={{ width: 'auto', padding: '0.5rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem' }}
+              >
+                <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2z"/></svg>
+                New Job
+              </button>
+            </div>
+
+            {jobFormOpen && (
+              <div style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--accent-gold)', borderRadius: '8px', padding: '1.5rem', boxShadow: 'var(--card-shadow)' }}>
+                <h4 style={{ marginTop: 0, marginBottom: '1.25rem', color: 'var(--accent-gold)' }}>
+                  {editingJobId ? 'Edit Job' : 'New Job'}
+                </h4>
+                <form onSubmit={handleSaveJob}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                    <div className="form-group" style={{ gridColumn: '1 / -1', marginBottom: 0 }}>
+                      <label>Job Title *</label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        value={jobTitle}
+                        onChange={e => setJobTitle(e.target.value)}
+                        placeholder="e.g. Senior News Editor"
+                        required
+                        style={{ margin: 0 }}
+                      />
+                    </div>
+                    <div className="form-group" style={{ gridColumn: '1 / -1', marginBottom: 0 }}>
+                      <label>Job Image <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(shown on the job card &amp; detail modal)</span></label>
+                      <ImageUploadField value={jobImage} onChange={setJobImage} onToast={addToast} />
+                    </div>
+                    <div className="form-group" style={{ gridColumn: '1 / -1', marginBottom: 0 }}>
+                      <label>Description *</label>
+                      <textarea
+                        className="form-textarea"
+                        value={jobDescription}
+                        onChange={e => setJobDescription(e.target.value)}
+                        placeholder="Describe the role, responsibilities, requirements, and how to apply. Separate paragraphs with a blank line."
+                        rows={10}
+                        style={{ resize: 'vertical', fontFamily: 'inherit', lineHeight: '1.7' }}
+                      />
+                    </div>
+                    <div className="form-group" style={{ gridColumn: '1 / -1', marginBottom: 0, display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                      <input
+                        type="checkbox"
+                        id="job-pub"
+                        checked={jobPublished}
+                        onChange={e => setJobPublished(e.target.checked)}
+                        style={{ width: '16px', height: '16px', accentColor: 'var(--accent-gold)', cursor: 'pointer' }}
+                      />
+                      <label htmlFor="job-pub" style={{ fontWeight: 500, cursor: 'pointer', margin: 0 }}>Publish immediately (visible on website)</label>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                    <button type="submit" className="btn-primary" style={{ width: 'auto' }} disabled={jobSaving}>
+                      {jobSaving ? 'Saving...' : (editingJobId ? 'Save Changes' : 'Publish Job')}
+                    </button>
+                    <button type="button" className="btn-secondary" style={{ width: 'auto' }} onClick={() => setJobFormOpen(false)}>
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            <div style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '6px', boxShadow: 'var(--card-shadow)', overflow: 'hidden' }}>
+              <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>
+                  All Jobs &nbsp;<span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>({jobs.length})</span>
+                </span>
+                <button onClick={fetchJobs} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                  <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16"><path d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/></svg>
+                  Refresh
+                </button>
+              </div>
+
+              {jobsLoading ? (
+                <div style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>Loading...</div>
+              ) : jobs.length === 0 ? (
+                <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <p>No jobs yet. Click <strong>New Job</strong> to publish your first opening.</p>
+                </div>
+              ) : (
+                <div style={{ overflowX: 'auto' }}>
+                  <div style={{ maxHeight: jobs.length > 6 ? '480px' : 'none', overflowY: jobs.length > 6 ? 'auto' : 'visible' }}>
+                    <table className="admin-table" style={{ margin: 0, borderRadius: 0, border: 'none' }}>
+                      <thead style={{ position: jobs.length > 6 ? 'sticky' : 'static', top: 0, zIndex: 1, backgroundColor: 'var(--bg-secondary)' }}>
+                        <tr>
+                          <th style={{ width: '44px', textAlign: 'center' }}>#</th>
+                          <th style={{ width: '70px' }}>Image</th>
+                          <th>Title</th>
+                          <th style={{ width: '90px', textAlign: 'center' }}>Status</th>
+                          <th style={{ width: '110px', textAlign: 'right' }}>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {jobs.map((item, idx) => (
+                          <tr
+                            key={item.id}
+                            draggable
+                            onDragStart={() => setJobDragIndex(idx)}
+                            onDragOver={(e) => { e.preventDefault(); if (jobDragOverIndex !== idx) setJobDragOverIndex(idx); }}
+                            onDrop={() => handleJobDrop(idx)}
+                            onDragEnd={() => { setJobDragIndex(null); setJobDragOverIndex(null); }}
+                            style={{
+                              cursor: 'grab',
+                              opacity: jobDragIndex === idx ? 0.4 : 1,
+                              boxShadow: jobDragOverIndex === idx && jobDragIndex !== null && jobDragIndex !== idx
+                                ? 'inset 0 2px 0 var(--accent-gold)' : 'none'
+                            }}
+                            title="Drag to reorder — the new order goes live on the website"
+                          >
+                            <td style={{ textAlign: 'center', color: 'var(--text-muted)', fontWeight: 600, fontSize: '0.8rem' }}>
+                              <span style={{ marginRight: '0.25rem', color: 'var(--text-muted)' }}>⋮⋮</span>{idx + 1}
+                            </td>
+                            <td>
+                              {item.image ? (
+                                <img src={item.image} alt="" style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '4px' }} />
+                              ) : (
+                                <div style={{ width: '48px', height: '48px', borderRadius: '4px', background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '0.7rem' }}>—</div>
+                              )}
+                            </td>
+                            <td>
+                              <div style={{ fontWeight: 600, fontSize: '0.875rem', marginBottom: item.description ? '0.2rem' : 0 }}>{item.title}</div>
+                              {item.description && (
+                                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.description}</div>
+                              )}
+                            </td>
+                            <td style={{ textAlign: 'center' }}>
+                              <button
+                                onClick={() => handleToggleJobPublish(item)}
+                                title={item.is_published ? 'Click to unpublish (set to Draft)' : 'Click to publish'}
+                                style={{
+                                  fontSize: '0.7rem', fontWeight: 700, padding: '0.2rem 0.55rem', borderRadius: '3px', border: 'none', cursor: 'pointer',
+                                  backgroundColor: item.is_published ? 'rgba(34,197,94,0.12)' : 'rgba(156,163,175,0.12)',
+                                  color: item.is_published ? '#16a34a' : '#6b7280'
+                                }}
+                              >
+                                {item.is_published ? 'Live' : 'Draft'}
+                              </button>
+                            </td>
+                            <td style={{ textAlign: 'right' }}>
+                              <div className="action-buttons" style={{ justifyContent: 'flex-end' }}>
+                                <button onClick={() => openEditJob(item)} className="btn-action-edit" title="Edit">
+                                  <svg width="13" height="13" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708l-3-3zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207l6.5-6.5z"/>
+                                    <path d="M5.5 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.03l-.179.178a.5.5 0 0 0-.12.196l-.51 1.87a.5.5 0 0 0 .617.614l1.871-.51a.5.5 0 0 0 .196-.12l6.634-6.634z"/>
+                                  </svg>
+                                </button>
+                                <button onClick={() => handleDeleteJob(item.id)} className="btn-action-delete" title="Delete">
+                                  <svg width="13" height="13" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                                    <path fillRule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                                  </svg>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+
+          </div>
+        )}
+
         {activeTab === 'liveupdates' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', animation: 'modalSlideIn 0.2s ease', marginTop: '1rem' }}>
 
