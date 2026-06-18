@@ -75,6 +75,10 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
   const [dragIndex, setDragIndex] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
 
+  // Drag-and-drop ordering state for the categories list
+  const [dragCatIndex, setDragCatIndex] = useState(null);
+  const [dragOverCatIndex, setDragOverCatIndex] = useState(null);
+
   // Modal / Form state
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formMode, setFormMode] = useState('add'); // 'add' | 'edit'
@@ -776,6 +780,58 @@ By using The One Journal, you acknowledge that you have read and agreed to these
     } catch (err) {
       addToast('Request failed.', 'error');
     }
+  };
+
+  // Toggle whether a category is shown on the public website
+  const handleToggleCategoryVisibility = async (cat) => {
+    const newVal = cat.is_visible ? 0 : 1;
+    try {
+      const res = await fetch('/api/manage_categories.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'toggle_category_visibility', id: cat.id, is_visible: newVal })
+      });
+      const data = await res.json();
+      if (data.success) {
+        addToast(newVal ? 'Category shown on website.' : 'Category hidden from website.', 'success');
+        await fetchCategories();
+      } else {
+        addToast(data.error || 'Failed to update visibility.', 'error');
+      }
+    } catch (err) {
+      addToast('Request failed.', 'error');
+    }
+  };
+
+  // Persist a new category order; the website header/sections follow this order
+  const saveCategoryOrder = async (newOrderIds) => {
+    try {
+      const res = await fetch('/api/manage_categories.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reorder_categories', order: newOrderIds })
+      });
+      const data = await res.json();
+      if (data.success) {
+        addToast('Category order updated — now live on the website.', 'success');
+        await fetchCategories();
+      } else {
+        addToast(data.error || 'Failed to reorder.', 'error');
+      }
+    } catch (err) {
+      addToast('Request failed.', 'error');
+    }
+  };
+
+  const handleCategoryDrop = (dropIndex) => {
+    const fromIndex = dragCatIndex;
+    setDragCatIndex(null);
+    setDragOverCatIndex(null);
+    if (fromIndex === null || fromIndex === dropIndex) return;
+    const list = [...categoriesList];
+    const [moved] = list.splice(fromIndex, 1);
+    list.splice(dropIndex, 0, moved);
+    saveCategoryOrder(list.map(c => c.id));
   };
 
   const handleDeleteCategory = (catId) => {
@@ -1734,10 +1790,16 @@ By using The One Journal, you acknowledge that you have read and agreed to these
 
               {/* Category Lists */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                {categoriesList.map((cat) => (
+                {categoriesList.map((cat, catIdx) => (
                   <div
                     key={cat.id}
                     onClick={() => setSelectedManagerCat(cat)}
+                    draggable={editingCatId !== cat.id}
+                    onDragStart={() => setDragCatIndex(catIdx)}
+                    onDragOver={(e) => { e.preventDefault(); if (dragOverCatIndex !== catIdx) setDragOverCatIndex(catIdx); }}
+                    onDrop={() => handleCategoryDrop(catIdx)}
+                    onDragEnd={() => { setDragCatIndex(null); setDragOverCatIndex(null); }}
+                    title="Drag to reorder — the website header & sections follow this order"
                     style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -1745,9 +1807,12 @@ By using The One Journal, you acknowledge that you have read and agreed to these
                       padding: '0.75rem 1rem',
                       borderRadius: '4px',
                       border: '1px solid',
-                      borderColor: selectedManagerCat?.id === cat.id ? 'var(--accent-gold)' : 'var(--border-color)',
+                      borderColor: dragOverCatIndex === catIdx && dragCatIndex !== null && dragCatIndex !== catIdx
+                        ? 'var(--accent-color)'
+                        : (selectedManagerCat?.id === cat.id ? 'var(--accent-gold)' : 'var(--border-color)'),
                       backgroundColor: selectedManagerCat?.id === cat.id ? 'rgba(197, 160, 89, 0.05)' : 'transparent',
-                      cursor: 'pointer',
+                      opacity: dragCatIndex === catIdx ? 0.4 : 1,
+                      cursor: 'grab',
                       transition: 'all var(--transition-fast)'
                     }}
                   >
@@ -1767,8 +1832,18 @@ By using The One Journal, you acknowledge that you have read and agreed to these
                       </form>
                     ) : (
                       <>
-                        <span style={{ fontWeight: selectedManagerCat?.id === cat.id ? 700 : 500 }}>
-                          {cat.name} <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 400 }}>({cat.subcategories?.length || 0} tags)</span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontWeight: selectedManagerCat?.id === cat.id ? 700 : 500 }}>
+                          <input
+                            type="checkbox"
+                            checked={!!cat.is_visible}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={() => handleToggleCategoryVisibility(cat)}
+                            title={cat.is_visible ? 'Visible on website — untick to hide' : 'Hidden from website — tick to show'}
+                            style={{ width: '16px', height: '16px', accentColor: 'var(--accent-gold)', cursor: 'pointer', flexShrink: 0 }}
+                          />
+                          <span style={{ opacity: cat.is_visible ? 1 : 0.5 }}>
+                            {cat.name} <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 400 }}>({cat.subcategories?.length || 0} tags)</span>
+                          </span>
                         </span>
                         <div style={{ display: 'flex', gap: '0.25rem' }} onClick={(e) => e.stopPropagation()}>
                           <button

@@ -25,7 +25,8 @@ export default function MainNavbar({ onSearchChange, searchVal, categories: back
   const categories = [
     ...(backendCategories || []).map((cat) => ({
       name: cat.name,
-      hash: `#category-${cat.slug}`,
+      // Top-level item scrolls to that category's section on the homepage
+      hash: `#section-${cat.slug}`,
       subcategories: (cat.subcategories || []).map((sub) => ({
         name: sub.name,
         hash: `#category-${cat.slug}`,
@@ -111,41 +112,41 @@ export default function MainNavbar({ onSearchChange, searchVal, categories: back
             ))}
           </ul>
 
-          {/* Search Trigger + Back */}
-          <div className="navbar-actions">
-            <button
-              onClick={toggleSearch}
-              className="search-trigger-btn"
-              aria-label="Toggle Search"
-              title="Search articles"
-            >
-              {isSearchOpen ? (
-                <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              ) : (
-                <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              )}
-            </button>
-
-            {/* Back to previous page (only on sub-pages, e.g. an article) */}
-            {window.location.hash && (
-              <button
-                onClick={() => { if (window.history.length > 1) window.history.back(); else { window.location.hash = ''; } }}
-                className="nav-back-btn"
-                aria-label="Go to previous page"
-                title="Go back"
-              >
-                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                </svg>
-                Back
-              </button>
-            )}
-          </div>
         </nav>
+      </div>
+
+      {/* Search + Back — pinned to the far-right corner of the full-width bar */}
+      <div className="navbar-actions">
+        <button
+          onClick={toggleSearch}
+          className="search-trigger-btn"
+          aria-label="Toggle Search"
+          title="Search articles"
+        >
+          {isSearchOpen ? (
+            <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          ) : (
+            <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          )}
+        </button>
+
+        {/* Back to previous page (only on sub-pages) — icon only */}
+        {window.location.hash && (
+          <button
+            onClick={() => { if (window.history.length > 1) window.history.back(); else { window.location.hash = ''; } }}
+            className="nav-back-btn"
+            aria-label="Go to previous page"
+            title="Go back"
+          >
+            <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* Search Input Bar Overlay */}

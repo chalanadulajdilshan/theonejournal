@@ -50,11 +50,13 @@ try {
                 echo json_encode(['error' => 'Title is required.']);
                 exit;
             }
+            // Stamp with PHP/system time so "time ago" matches the visitor's clock
+            // (MySQL's session timezone can be offset from the server).
             $stmt = $pdo->prepare(
-                "INSERT INTO live_updates (title, summary, content, image, author, category, is_published)
-                 VALUES (?, ?, ?, ?, ?, ?, ?)"
+                "INSERT INTO live_updates (title, summary, content, image, author, category, is_published, created_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
             );
-            $stmt->execute([$title, $summary, $content, $image ?: null, $author, $cat, $pub]);
+            $stmt->execute([$title, $summary, $content, $image ?: null, $author, $cat, $pub, date('Y-m-d H:i:s')]);
             echo json_encode(['success' => true, 'message' => 'Live update added.', 'id' => $pdo->lastInsertId()]);
             break;
 

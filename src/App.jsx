@@ -48,6 +48,11 @@ export default function App() {
   const [liveUpdates, setLiveUpdates] = useState(null);
   const [siteViews, setSiteViews] = useState(null);
   const [categories, setCategories] = useState([]);
+  // Remember which live updates have been opened so their titles show as "read"
+  const [clickedLiveIds, setClickedLiveIds] = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem('clickedLiveIds') || '[]')); }
+    catch { return new Set(); }
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [currentHash, setCurrentHash] = useState(window.location.hash);
 
@@ -99,15 +104,19 @@ export default function App() {
     }
   };
 
+  // Format a live update timestamp as date + hours:minutes
+  // e.g. "Jun 18, 2026, 7:34 PM"
   const liveTimeAgo = (dateStr) => {
     if (!dateStr) return '';
-    const diffMs = Date.now() - new Date(dateStr).getTime();
-    const diffMin = Math.floor(diffMs / 60000);
-    if (diffMin < 1) return 'Just Now';
-    if (diffMin < 60) return diffMin + 'm ago';
-    const diffHr = Math.floor(diffMin / 60);
-    if (diffHr < 24) return diffHr + 'h ago';
-    return Math.floor(diffHr / 24) + 'd ago';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleString('en-US', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
   // Handle dark mode side-effect
@@ -161,6 +170,12 @@ export default function App() {
   // Open a live update as a full page and record its view count
   const handleLiveUpdateClick = (item) => {
     if (item && item.id) {
+      setClickedLiveIds(prev => {
+        const next = new Set(prev);
+        next.add(item.id);
+        localStorage.setItem('clickedLiveIds', JSON.stringify([...next]));
+        return next;
+      });
       fetch('/api/click_live_update.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -276,12 +291,13 @@ export default function App() {
 
   // Categories that get their own homepage "story" section. The special ones
   // (You May Like, Partner Content, Videos & Podcasts) have dedicated sections.
-  const SPECIAL_SECTION_SLUGS = ['partner-content', 'videos-podcasts', 'you-may-like'];
-  const storyCategories = categories.filter(c => !SPECIAL_SECTION_SLUGS.includes(c.slug));
+  // Only categories ticked "visible" in the admin appear on the website
+  const visibleCategories = categories.filter(c => c.is_visible !== 0);
 
-  // "You May Like" is an auto-generated view-count feed, not a browsable
-  // category, so it is hidden from the navbar menu.
-  const navCategories = categories.filter(c => c.slug !== 'you-may-like');
+  // "You May Like" is the auto-generated hero feed shown at the top, so it is
+  // excluded from both the navbar and the ordered homepage body sections.
+  // Everything else renders in the admin drag order (sort_order).
+  const navCategories = visibleCategories.filter(c => c.slug !== 'you-may-like');
 
   // Prepare layout props for page components
   const layoutProps = {
@@ -470,8 +486,8 @@ export default function App() {
                               <span className="live-featured-badge">{liveTimeAgo(latest.created_at)}</span>
                               <span className="live-featured-tag">{latest.category || 'Breaking'}</span>
                             </div>
-                            <h4 className="live-featured-title">{latest.title}</h4>
-                            <div style={{ marginTop: '0.4rem' }}>
+                            <h4 className={`live-featured-title${clickedLiveIds.has(latest.id) ? ' live-visited' : ''}`}>{latest.title}</h4>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0 0.85rem 0.85rem' }}>
                               <ViewsBadge views={latest.views_count} />
                             </div>
                           </div>
@@ -485,7 +501,7 @@ export default function App() {
                             <div className="live-timeline-node"></div>
                             <span className="live-time-badge">{liveTimeAgo(item.created_at)}</span>
                             <div
-                              className="live-title"
+                              className={`live-title${clickedLiveIds.has(item.id) ? ' live-visited' : ''}`}
                               onClick={() => handleLiveUpdateClick(item)}
                             >
                               {item.title}
@@ -507,36 +523,37 @@ export default function App() {
               </div>
             </div>
 
-            {/* 2. PARTNER CONTENT (Grid) */}
-            {articles.partnerContent && articles.partnerContent.length > 0 && (
-              <section className="home-section" id="section-partner-content">
-                <SectionHeader title="PARTNER CONTENT" id="partner-content" viewAllLink="#category-partner" />
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem' }}>
-                  {articles.partnerContent.slice(0, 4).map((art) => (
-                    <ArticleCard 
-                      key={art.id} 
-                      article={{...art, tag: art.tag || 'SPONSORED'}} 
-                      onClick={handleArticleClick} 
-                    />
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* 3. VIDEOS & PODCASTS */}
-            <section className="home-section" id="section-videos-&-podcasts">
-              <SectionHeader title="Videos & Podcasts" id="videos-podcasts" viewAllLink="#category-videos" />
-              <MediaSection 
-                articles={articles.videosAndPodcasts || []} 
-                onArticleClick={handleArticleClick} 
-              />
-            </section>
-
-            {/* Category story sections — driven by the admin categories so
-                they always match the news details set in the admin panel */}
-            {storyCategories.map((cat) => {
+            {/* All category sections render in the admin drag order, so
+                rearranging categories rearranges the whole homepage body. */}
+            {navCategories.map((cat) => {
               const list = articlesForCategory(cat);
               if (list.length === 0) return null;
+
+              // Partner Content → sponsored card grid
+              if (cat.slug === 'partner-content') {
+                return (
+                  <section className="home-section" id={`section-${cat.slug}`} key={cat.id}>
+                    <SectionHeader title={cat.name} id={cat.slug} viewAllLink={`#category-${cat.slug}`} />
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem' }}>
+                      {list.map((art) => (
+                        <ArticleCard key={art.id} article={{ ...art, tag: art.tag || 'SPONSORED' }} onClick={handleArticleClick} />
+                      ))}
+                    </div>
+                  </section>
+                );
+              }
+
+              // Videos & Podcasts → horizontal media carousel
+              if (cat.slug === 'videos-podcasts') {
+                return (
+                  <section className="home-section" id={`section-${cat.slug}`} key={cat.id}>
+                    <SectionHeader title={cat.name} id={cat.slug} viewAllLink={`#category-${cat.slug}`} />
+                    <MediaSection articles={list} onArticleClick={handleArticleClick} />
+                  </section>
+                );
+              }
+
+              // Regular category → featured + 2x2 grid
               const { featured, gridItems } = getStorySplit(list);
               return (
                 <section className="home-section" id={`section-${cat.slug}`} key={cat.id}>
@@ -554,18 +571,6 @@ export default function App() {
                 </section>
               );
             })}
-
-            {/* 9. BOTTOM PARTNER CONTENT */}
-            {articles.partnerContent && articles.partnerContent.length > 1 && (
-              <section className="home-section" id="section-partner-content">
-                <SectionHeader title="Partner Content" id="partner-content-bottom" viewAllLink="#category-partner" />
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.5rem', marginTop: '1.5rem' }}>
-                  {articles.partnerContent.slice(1).map((art) => (
-                    <ArticleCard key={art.id} article={art} onClick={handleArticleClick} />
-                  ))}
-                </div>
-              </section>
-            )}
 
           </div>
         )}

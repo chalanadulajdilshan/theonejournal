@@ -35,7 +35,9 @@ try {
     $pdo->exec("CREATE TABLE IF NOT EXISTS categories (
         id INT AUTO_INCREMENT PRIMARY KEY,
         name VARCHAR(100) NOT NULL UNIQUE,
-        slug VARCHAR(100) NOT NULL UNIQUE
+        slug VARCHAR(100) NOT NULL UNIQUE,
+        is_visible TINYINT(1) NOT NULL DEFAULT 1,
+        sort_order INT NOT NULL DEFAULT 0
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
     echo "Table 'categories' created.\n";
 

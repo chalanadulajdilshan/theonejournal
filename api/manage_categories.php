@@ -65,6 +65,34 @@ try {
             echo json_encode(['success' => true, 'message' => 'Category updated successfully.']);
             break;
 
+        case 'reorder_categories':
+            $order = $input['order'] ?? [];   // category ids in their new order
+            if (!is_array($order) || count($order) < 2) {
+                header('HTTP/1.1 400 Bad Request');
+                echo json_encode(['error' => 'A list of at least two category ids is required.']);
+                exit;
+            }
+            $pdo->beginTransaction();
+            $upd = $pdo->prepare("UPDATE categories SET sort_order = ? WHERE id = ?");
+            foreach ($order as $i => $id) {
+                $upd->execute([$i, intval($id)]);
+            }
+            $pdo->commit();
+            echo json_encode(['success' => true, 'message' => 'Category order updated.']);
+            break;
+
+        case 'toggle_category_visibility':
+            $id  = intval($input['id'] ?? 0);
+            $vis = isset($input['is_visible']) ? (int)(bool)$input['is_visible'] : 1;
+            if (empty($id)) {
+                header('HTTP/1.1 400 Bad Request');
+                echo json_encode(['error' => 'Category ID is required.']);
+                exit;
+            }
+            $pdo->prepare("UPDATE categories SET is_visible = ? WHERE id = ?")->execute([$vis, $id]);
+            echo json_encode(['success' => true, 'message' => 'Category visibility updated.']);
+            break;
+
         case 'delete_category':
             $id = intval($input['id'] ?? 0);
             if (empty($id)) {

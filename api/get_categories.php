@@ -7,8 +7,8 @@ header("Access-Control-Allow-Methods: *");
 require_once __DIR__ . '/db.php';
 
 try {
-    // Fetch all categories
-    $catStmt = $pdo->query("SELECT * FROM categories ORDER BY name ASC");
+    // Fetch all categories in the admin-defined drag order
+    $catStmt = $pdo->query("SELECT * FROM categories ORDER BY sort_order ASC, name ASC");
     $categories = $catStmt->fetchAll();
 
     // Fetch all subcategories
@@ -37,6 +37,7 @@ try {
             'id' => $catId,
             'name' => $cat['name'],
             'slug' => $cat['slug'],
+            'is_visible' => isset($cat['is_visible']) ? (int)$cat['is_visible'] : 1,
             'subcategories' => $subsByCategory[$catId] ?? []
         ];
     }
