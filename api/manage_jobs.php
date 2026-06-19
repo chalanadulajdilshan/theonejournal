@@ -17,6 +17,7 @@ try {
             image        VARCHAR(1000) DEFAULT NULL,
             description  LONGTEXT,
             is_published TINYINT(1)    NOT NULL DEFAULT 1,
+            country_id   INT           DEFAULT NULL,
             sort_order   INT           NOT NULL DEFAULT 0,
             created_at   TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
             updated_at   TIMESTAMP     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -24,12 +25,16 @@ try {
     ");
 } catch (\PDOException $e) { /* ignore */ }
 
+try { $pdo->exec("ALTER TABLE jobs ADD COLUMN country_id INT DEFAULT NULL"); } catch (\PDOException $e) { /* column exists */ }
+
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     try {
         $stmt = $pdo->query(
-            "SELECT id, title, image, description, is_published, sort_order, created_at, updated_at
-             FROM jobs
-             ORDER BY sort_order ASC, id DESC"
+            "SELECT j.id, j.title, j.image, j.description, j.is_published, j.country_id, j.sort_order, j.created_at, j.updated_at,
+                    c.name AS country_name, c.flag AS country_flag
+             FROM jobs j
+             LEFT JOIN countries c ON c.id = j.country_id
+             ORDER BY j.sort_order ASC, j.id DESC"
         );
         echo json_encode($stmt->fetchAll());
     } catch (\PDOException $e) {
@@ -56,6 +61,7 @@ try {
             $image       = trim($input['image']       ?? '');
             $description = trim($input['description'] ?? '');
             $pub         = isset($input['is_published']) ? (int)$input['is_published'] : 1;
+            $countryId   = isset($input['country_id']) && $input['country_id'] !== '' ? (int)$input['country_id'] : null;
 
             if (empty($title)) {
                 header('HTTP/1.1 400 Bad Request');
@@ -67,10 +73,10 @@ try {
             $newSort = ((int)($minRow['min_so'] ?? 0)) - 1;
 
             $stmt = $pdo->prepare(
-                "INSERT INTO jobs (title, image, description, is_published, sort_order)
-                 VALUES (?, ?, ?, ?, ?)"
+                "INSERT INTO jobs (title, image, description, is_published, country_id, sort_order)
+                 VALUES (?, ?, ?, ?, ?, ?)"
             );
-            $stmt->execute([$title, $image ?: null, $description, $pub, $newSort]);
+            $stmt->execute([$title, $image ?: null, $description, $pub, $countryId, $newSort]);
             echo json_encode(['success' => true, 'message' => 'Job added.', 'id' => $pdo->lastInsertId()]);
             break;
         }
@@ -81,6 +87,7 @@ try {
             $image       = trim($input['image']         ?? '');
             $description = trim($input['description']   ?? '');
             $pub         = isset($input['is_published']) ? (int)$input['is_published'] : 1;
+            $countryId   = isset($input['country_id']) && $input['country_id'] !== '' ? (int)$input['country_id'] : null;
 
             if (!$id || empty($title)) {
                 header('HTTP/1.1 400 Bad Request');
@@ -88,9 +95,9 @@ try {
                 exit;
             }
             $stmt = $pdo->prepare(
-                "UPDATE jobs SET title=?, image=?, description=?, is_published=? WHERE id=?"
+                "UPDATE jobs SET title=?, image=?, description=?, is_published=?, country_id=? WHERE id=?"
             );
-            $stmt->execute([$title, $image ?: null, $description, $pub, $id]);
+            $stmt->execute([$title, $image ?: null, $description, $pub, $countryId, $id]);
             echo json_encode(['success' => true, 'message' => 'Job saved.']);
             break;
         }

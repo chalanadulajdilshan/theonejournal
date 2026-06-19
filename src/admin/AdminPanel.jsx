@@ -196,10 +196,20 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
   const [jobImage, setJobImage] = useState('');
   const [jobDescription, setJobDescription] = useState('');
   const [jobPublished, setJobPublished] = useState(true);
+  const [jobCountryId, setJobCountryId] = useState('');
   const [jobFormOpen, setJobFormOpen] = useState(false);
   const [jobSaving, setJobSaving] = useState(false);
   const [jobDragIndex, setJobDragIndex] = useState(null);
   const [jobDragOverIndex, setJobDragOverIndex] = useState(null);
+
+  // Countries Manager state
+  const [countries, setCountries] = useState([]);
+  const [countriesLoading, setCountriesLoading] = useState(false);
+  const [editingCountryId, setEditingCountryId] = useState(null);
+  const [countryName, setCountryName] = useState('');
+  const [countryFlag, setCountryFlag] = useState('');
+  const [countryFormOpen, setCountryFormOpen] = useState(false);
+  const [countrySaving, setCountrySaving] = useState(false);
 
   // Account / Credentials Manager state
   const [accNewUsername, setAccNewUsername] = useState('');
@@ -1259,6 +1269,8 @@ By using The One Journal, you acknowledge that you have read and agreed to these
     setJobImage('');
     setJobDescription('');
     setJobPublished(true);
+    setJobCountryId('');
+    fetchCountries();
     setJobFormOpen(true);
   };
 
@@ -1268,6 +1280,8 @@ By using The One Journal, you acknowledge that you have read and agreed to these
     setJobImage(item.image || '');
     setJobDescription(item.description || '');
     setJobPublished(item.is_published === 1 || item.is_published === true);
+    setJobCountryId(item.country_id ? String(item.country_id) : '');
+    fetchCountries();
     setJobFormOpen(true);
   };
 
@@ -1281,7 +1295,8 @@ By using The One Journal, you acknowledge that you have read and agreed to these
       title: jobTitle,
       image: jobImage,
       description: jobDescription,
-      is_published: jobPublished ? 1 : 0
+      is_published: jobPublished ? 1 : 0,
+      country_id: jobCountryId === '' ? null : Number(jobCountryId)
     };
     if (editingJobId) payload.id = editingJobId;
     try {
@@ -1385,6 +1400,92 @@ By using The One Journal, you acknowledge that you have read and agreed to these
     list.splice(dropIndex, 0, moved);
     setJobs(list);
     saveJobOrder(list.map(j => j.id));
+  };
+
+  // COUNTRIES CRUD HANDLERS
+  const fetchCountries = async () => {
+    setCountriesLoading(true);
+    try {
+      const res = await fetch('/api/manage_countries.php');
+      const data = await res.json();
+      setCountries(Array.isArray(data) ? data : []);
+    } catch {
+      addToast('Failed to load countries.', 'error');
+    } finally {
+      setCountriesLoading(false);
+    }
+  };
+
+  const openAddCountry = () => {
+    setEditingCountryId(null);
+    setCountryName('');
+    setCountryFlag('');
+    setCountryFormOpen(true);
+  };
+
+  const openEditCountry = (item) => {
+    setEditingCountryId(item.id);
+    setCountryName(item.name);
+    setCountryFlag(item.flag || '');
+    setCountryFormOpen(true);
+  };
+
+  const handleSaveCountry = async (e) => {
+    e.preventDefault();
+    if (!countryName.trim()) return;
+    setCountrySaving(true);
+    const action = editingCountryId ? 'edit' : 'add';
+    const payload = { action, name: countryName.trim(), flag: countryFlag };
+    if (editingCountryId) payload.id = editingCountryId;
+    try {
+      const res = await fetch('/api/manage_countries.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        addToast(editingCountryId ? 'Country saved.' : 'Country added.', 'success');
+        setCountryFormOpen(false);
+        fetchCountries();
+      } else {
+        addToast(data.error || 'Failed to save country.', 'error');
+      }
+    } catch {
+      addToast('Network connection failed.', 'error');
+    } finally {
+      setCountrySaving(false);
+    }
+  };
+
+  const handleDeleteCountry = (id) => {
+    Swal.fire({
+      title: 'Delete Country?',
+      text: 'Jobs assigned to this country will become unassigned.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, delete',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#dc3545'
+    }).then(async (r) => {
+      if (!r.isConfirmed) return;
+      try {
+        const res = await fetch('/api/manage_countries.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'delete', id })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          addToast('Country deleted.', 'success');
+          fetchCountries();
+        } else {
+          addToast(data.error || 'Failed to delete.', 'error');
+        }
+      } catch {
+        addToast('Network connection failed.', 'error');
+      }
+    });
   };
 
   // ACCOUNT / CREDENTIALS HANDLER
@@ -1833,7 +1934,25 @@ By using The One Journal, you acknowledge that you have read and agreed to these
               whiteSpace: 'nowrap'
             }}
           >
-            Jobs Manager
+            Foreign Jobs Manager
+          </button>
+          <button
+            onClick={() => { setActiveTab('countries'); fetchCountries(); }}
+            className={`semibold`}
+            style={{
+              background: 'none',
+              border: 'none',
+              borderBottom: activeTab === 'countries' ? '3px solid var(--accent-gold)' : '3px solid transparent',
+              color: activeTab === 'countries' ? 'var(--text-primary)' : 'var(--text-muted)',
+              padding: '0.75rem 1.5rem',
+              cursor: 'pointer',
+              fontSize: '0.95rem',
+              outline: 'none',
+              transition: 'all var(--transition-fast)',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            Countries
           </button>
           <button
             onClick={() => { setActiveTab('liveupdates'); fetchLiveUpdates(); }}
@@ -2468,7 +2587,7 @@ By using The One Journal, you acknowledge that you have read and agreed to these
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: '1rem' }}>Job Openings</h3>
+                <h3 style={{ margin: 0, fontSize: '1rem' }}>Foreign Job Openings</h3>
                 <p style={{ margin: '0.25rem 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                   Published jobs appear live on{' '}
                   <a href="#jobs" target="_blank" rel="noreferrer" style={{ color: 'var(--accent-gold)' }}>theonejournal.com/jobs</a>
@@ -2481,14 +2600,14 @@ By using The One Journal, you acknowledge that you have read and agreed to these
                 style={{ width: 'auto', padding: '0.5rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem' }}
               >
                 <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2z"/></svg>
-                New Job
+                New Foreign Job
               </button>
             </div>
 
             {jobFormOpen && (
               <div style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--accent-gold)', borderRadius: '8px', padding: '1.5rem', boxShadow: 'var(--card-shadow)' }}>
                 <h4 style={{ marginTop: 0, marginBottom: '1.25rem', color: 'var(--accent-gold)' }}>
-                  {editingJobId ? 'Edit Job' : 'New Job'}
+                  {editingJobId ? 'Edit Foreign Job' : 'New Foreign Job'}
                 </h4>
                 <form onSubmit={handleSaveJob}>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
@@ -2519,6 +2638,20 @@ By using The One Journal, you acknowledge that you have read and agreed to these
                         style={{ resize: 'vertical', fontFamily: 'inherit', lineHeight: '1.7' }}
                       />
                     </div>
+                    <div className="form-group" style={{ gridColumn: '1 / -1', marginBottom: 0 }}>
+                      <label>Country <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(used to filter jobs on the website)</span></label>
+                      <select
+                        className="form-input"
+                        value={jobCountryId}
+                        onChange={e => setJobCountryId(e.target.value)}
+                        style={{ margin: 0 }}
+                      >
+                        <option value="">— No country —</option>
+                        {countries.map(c => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                    </div>
                     <div className="form-group" style={{ gridColumn: '1 / -1', marginBottom: 0, display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                       <input
                         type="checkbox"
@@ -2545,7 +2678,7 @@ By using The One Journal, you acknowledge that you have read and agreed to these
             <div style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '6px', boxShadow: 'var(--card-shadow)', overflow: 'hidden' }}>
               <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>
-                  All Jobs &nbsp;<span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>({jobs.length})</span>
+                  All Foreign Jobs &nbsp;<span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>({jobs.length})</span>
                 </span>
                 <button onClick={fetchJobs} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                   <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16"><path d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/></svg>
@@ -2557,7 +2690,7 @@ By using The One Journal, you acknowledge that you have read and agreed to these
                 <div style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>Loading...</div>
               ) : jobs.length === 0 ? (
                 <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                  <p>No jobs yet. Click <strong>New Job</strong> to publish your first opening.</p>
+                  <p>No foreign jobs yet. Click <strong>New Foreign Job</strong> to publish your first opening.</p>
                 </div>
               ) : (
                 <div style={{ overflowX: 'auto' }}>
@@ -2643,6 +2776,126 @@ By using The One Journal, you acknowledge that you have read and agreed to these
               )}
             </div>
 
+          </div>
+        )}
+
+        {activeTab === 'countries' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', animation: 'modalSlideIn 0.2s ease', marginTop: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1rem' }}>Countries</h3>
+                <p style={{ margin: '0.25rem 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  Add countries with a flag image. Each job can be assigned to one country; the website Jobs page shows flags so visitors can filter by country.
+                </p>
+              </div>
+              <button
+                onClick={openAddCountry}
+                className="btn-primary"
+                style={{ width: 'auto', padding: '0.5rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem' }}
+              >
+                <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2z"/></svg>
+                New Country
+              </button>
+            </div>
+
+            {countryFormOpen && (
+              <div style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--accent-gold)', borderRadius: '8px', padding: '1.5rem', boxShadow: 'var(--card-shadow)' }}>
+                <h4 style={{ marginTop: 0, marginBottom: '1.25rem', color: 'var(--accent-gold)' }}>
+                  {editingCountryId ? 'Edit Country' : 'New Country'}
+                </h4>
+                <form onSubmit={handleSaveCountry}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem', marginBottom: '1rem' }}>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label>Country Name *</label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        value={countryName}
+                        onChange={e => setCountryName(e.target.value)}
+                        placeholder="e.g. United Arab Emirates"
+                        required
+                        style={{ margin: 0 }}
+                      />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label>Flag Image</label>
+                      <ImageUploadField value={countryFlag} onChange={setCountryFlag} onToast={addToast} />
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                    <button type="submit" className="btn-primary" style={{ width: 'auto' }} disabled={countrySaving}>
+                      {countrySaving ? 'Saving...' : (editingCountryId ? 'Save Changes' : 'Add Country')}
+                    </button>
+                    <button type="button" className="btn-secondary" style={{ width: 'auto' }} onClick={() => setCountryFormOpen(false)}>
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            <div style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '6px', boxShadow: 'var(--card-shadow)', overflow: 'hidden' }}>
+              <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>
+                  All Countries &nbsp;<span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>({countries.length})</span>
+                </span>
+                <button onClick={fetchCountries} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.78rem' }}>
+                  Refresh
+                </button>
+              </div>
+              {countriesLoading ? (
+                <div style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>Loading...</div>
+              ) : countries.length === 0 ? (
+                <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <p>No countries yet. Click <strong>New Country</strong> to add the first one.</p>
+                </div>
+              ) : (
+                <div style={{ overflowX: 'auto' }}>
+                  <table className="admin-table" style={{ margin: 0, borderRadius: 0, border: 'none' }}>
+                    <thead style={{ backgroundColor: 'var(--bg-secondary)' }}>
+                      <tr>
+                        <th style={{ width: '44px', textAlign: 'center' }}>#</th>
+                        <th style={{ width: '90px' }}>Flag</th>
+                        <th>Name</th>
+                        <th style={{ width: '110px', textAlign: 'right' }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {countries.map((item, idx) => (
+                        <tr key={item.id}>
+                          <td style={{ textAlign: 'center', color: 'var(--text-muted)', fontWeight: 600, fontSize: '0.8rem' }}>{idx + 1}</td>
+                          <td>
+                            {item.flag ? (
+                              <img src={item.flag} alt="" style={{ width: '56px', height: '36px', objectFit: 'cover', borderRadius: '3px', border: '1px solid var(--border-color)' }} />
+                            ) : (
+                              <div style={{ width: '56px', height: '36px', borderRadius: '3px', background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '0.7rem' }}>—</div>
+                            )}
+                          </td>
+                          <td>
+                            <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{item.name}</div>
+                          </td>
+                          <td style={{ textAlign: 'right' }}>
+                            <div className="action-buttons" style={{ justifyContent: 'flex-end' }}>
+                              <button onClick={() => openEditCountry(item)} className="btn-action-edit" title="Edit">
+                                <svg width="13" height="13" fill="currentColor" viewBox="0 0 16 16">
+                                  <path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708l-3-3zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207l6.5-6.5z"/>
+                                </svg>
+                              </button>
+                              <button onClick={() => handleDeleteCountry(item.id)} className="btn-action-delete" title="Delete">
+                                <svg width="13" height="13" fill="currentColor" viewBox="0 0 16 16">
+                                  <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                                  <path fillRule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                                </svg>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
