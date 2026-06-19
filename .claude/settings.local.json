@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(findstr init *)"
+      "Bash(findstr init *)",
+      "Bash(npx --no-install eslint src/admin/AdminPanel.jsx)"
     ]
   }
 }
