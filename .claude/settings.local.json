@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(findstr init *)",
-      "Bash(npx --no-install eslint src/admin/AdminPanel.jsx)"
+      "Bash(npx --no-install eslint src/admin/AdminPanel.jsx)",
+      "Bash(node -e \"console.log\\(require\\('sharp'\\)?.versions||'no sharp'\\)\")",
+      "Bash(npx --yes sharp-cli@4 -i src/assets/logo.webp -o src/assets/logo-optimized.webp -f webp --webp-quality 60 resize 1600)",
+      "Bash(npx --yes sharp-cli@4 -i src/assets/logo.webp -o src/assets/logo-optimized.webp -f webp -q 55 resize 1600)"
     ]
   }
 }

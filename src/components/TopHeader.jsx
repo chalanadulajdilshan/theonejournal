@@ -76,8 +76,8 @@ export default function TopHeader({ darkMode, toggleDarkMode, siteViews }) {
                 src={logoImage}
                 alt="The One Journal Logo"
                 className="brand-logo-img-full"
-                width="2400"
-                height="358"
+                width="1600"
+                height="239"
                 fetchPriority="high"
                 decoding="async"
               />
