@@ -1715,6 +1715,8 @@ body.dark-mode .navbar-wrapper {
   color: var(--text-primary);
   text-transform: uppercase;
   letter-spacing: 1px;
+  text-decoration: none;
+  cursor: pointer;
 }
 
 .drawer-brand-title span {
@@ -1812,7 +1814,7 @@ body.dark-mode .navbar-wrapper {
   display: flex;
   position: absolute;
   white-space: nowrap;
-  animation: tickerAnimation 50s linear infinite;
+  animation: tickerAnimation 90s linear infinite;
   padding-left: 100%;
 }
 
@@ -2564,7 +2566,9 @@ body.dark-mode .navbar-wrapper {
 .footer-upper-links {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem 0.75rem;
   font-weight: 700;
   font-size: 0.95rem;
   font-family: var(--font-sans);

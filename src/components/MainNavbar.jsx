@@ -189,7 +189,20 @@ export default function MainNavbar({ onSearchChange, searchVal, categories: back
       )}
       <div className={`mobile-drawer ${isMobileDrawerOpen ? 'open' : ''}`}>
         <div className="drawer-header">
-          <h2 className="drawer-brand-title">THE ONE <span>JOURNAL</span></h2>
+          <a
+            href="/"
+            className="drawer-brand-title"
+            aria-label="Home"
+            onClick={(e) => {
+              e.preventDefault();
+              onSearchChange('');
+              window.location.hash = '';
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+              setIsMobileDrawerOpen(false);
+            }}
+          >
+            THE ONE <span>JOURNAL</span>
+          </a>
           <button onClick={() => setIsMobileDrawerOpen(false)} className="drawer-close-btn" aria-label="Close Menu">
             <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
