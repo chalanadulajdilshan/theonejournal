@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import Layout from '../components/Layout';
+import ViewsBadge from '../components/ViewsBadge';
 
 export default function Jobs({ layoutProps }) {
   const [countries, setCountries] = useState(null);
@@ -47,6 +48,11 @@ export default function Jobs({ layoutProps }) {
   const handleSelectCountry = (country) => {
     setSelectedCountry(country);
     fetchJobs(country.id);
+    // Record a view for this country, and reflect it locally right away
+    fetch(`/api/click_country.php?country_id=${country.id}`).catch(() => {});
+    setCountries(prev => Array.isArray(prev)
+      ? prev.map(c => c.id === country.id ? { ...c, views: (Number(c.views) || 0) + 1 } : c)
+      : prev);
   };
 
   const handleBackToCountries = () => {
@@ -122,6 +128,9 @@ export default function Jobs({ layoutProps }) {
                       <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
                         {country.job_count} {country.job_count == 1 ? 'opening' : 'openings'}
                       </div>
+                      <div style={{ display: 'flex', justifyContent: 'center', marginTop: '0.4rem' }}>
+                        <ViewsBadge views={country.views} />
+                      </div>
                     </div>
                   </button>
                 ))}
@@ -130,25 +139,30 @@ export default function Jobs({ layoutProps }) {
           </>
         ) : (
           <>
-            <button
-              onClick={handleBackToCountries}
-              style={{
-                background: 'none', border: 'none', cursor: 'pointer',
-                color: 'var(--accent-gold)', fontWeight: 600, fontSize: '0.9rem',
-                padding: 0, marginBottom: '1rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem'
-              }}
-            >
-              ← Back to countries
-            </button>
-            <h1 style={{ marginBottom: '0.5rem', borderBottom: '2px solid var(--accent-gold)', paddingBottom: '0.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.75rem' }}>
-              {selectedCountry.flag && (
-                <img src={selectedCountry.flag} alt="" style={{ width: '36px', height: '24px', objectFit: 'cover', borderRadius: '3px', border: '1px solid var(--border-color)' }} />
-              )}
-              Openings in {selectedCountry.name}
-            </h1>
-            <p style={{ color: 'var(--text-muted)', marginBottom: '2rem', maxWidth: '720px', lineHeight: 1.6 }}>
-              Click any role to view the full description and how to apply.
-            </p>
+            <div style={{ position: 'relative', textAlign: 'center', marginBottom: '2rem' }}>
+              <button
+                onClick={handleBackToCountries}
+                aria-label="Back to countries"
+                title="Back to countries"
+                style={{
+                  position: 'absolute', left: 0, top: '0.25rem',
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: 'var(--accent-gold)', fontWeight: 700, fontSize: '1.6rem',
+                  lineHeight: 1, padding: '0.25rem 0.5rem'
+                }}
+              >
+                ←
+              </button>
+              <h1 style={{ margin: 0, borderBottom: '2px solid var(--accent-gold)', paddingBottom: '0.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.75rem' }}>
+                {selectedCountry.flag && (
+                  <img src={selectedCountry.flag} alt="" style={{ width: '36px', height: '24px', objectFit: 'cover', borderRadius: '3px', border: '1px solid var(--border-color)' }} />
+                )}
+                Openings in {selectedCountry.name}
+              </h1>
+              <p style={{ color: 'var(--text-muted)', marginTop: '0.85rem', marginBottom: 0, lineHeight: 1.6 }}>
+                Click any role to view the full description and how to apply.
+              </p>
+            </div>
 
             {jobs === null ? (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.5rem' }}>

@@ -10,13 +10,13 @@ $onlyWithJobs = isset($_GET['with_jobs']) && $_GET['with_jobs'] == '1';
 
 try {
     if ($onlyWithJobs) {
-        $sql = "SELECT c.id, c.name, c.flag, c.sort_order, COUNT(j.id) AS job_count
+        $sql = "SELECT c.id, c.name, c.flag, c.sort_order, c.views, COUNT(j.id) AS job_count
                 FROM countries c
                 INNER JOIN jobs j ON j.country_id = c.id AND j.is_published = 1
-                GROUP BY c.id, c.name, c.flag, c.sort_order
+                GROUP BY c.id, c.name, c.flag, c.sort_order, c.views
                 ORDER BY c.sort_order ASC, c.name ASC";
     } else {
-        $sql = "SELECT id, name, flag, sort_order
+        $sql = "SELECT id, name, flag, sort_order, views
                 FROM countries
                 ORDER BY sort_order ASC, name ASC";
     }

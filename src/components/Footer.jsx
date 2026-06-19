@@ -1,5 +1,5 @@
 import React from 'react';
-import footerLogo from '../assets/footer_logo.png';
+import footerLogo from '../assets/footer_logo.webp';
 
 export default function Footer({ categories = [] }) {
   const socialLinks = [
@@ -86,7 +86,7 @@ export default function Footer({ categories = [] }) {
         <div className="footer-top-row">
           {/* Brand info */}
           <div className="footer-brand">
-            <img src={footerLogo} alt="The One Journal Crest Logo" className="footer-crest-logo" />
+            <img src={footerLogo} alt="The One Journal Crest Logo" className="footer-crest-logo" width="130" height="130" loading="lazy" decoding="async" />
             <p className="footer-desc">
               The One Journal is your premier source for breaking news, in-depth reports, business insights, technological developments, and global updates. We deliver accurate, timely, and trusted journalism directly to our readers.
             </p>

@@ -28,7 +28,17 @@ try {
         $stmt->execute([$limit]);
     }
 
-    echo json_encode($stmt->fetchAll());
+    $rows = $stmt->fetchAll();
+    // Attach an absolute epoch timestamp so the client can compute "time ago"
+    // correctly regardless of the visitor's browser timezone. created_at is
+    // parsed in PHP's own timezone (the same one it was written in), giving the
+    // true instant; the browser just compares it against Date.now().
+    foreach ($rows as &$row) {
+        $row['created_ts'] = !empty($row['created_at']) ? strtotime($row['created_at']) : null;
+    }
+    unset($row);
+
+    echo json_encode($rows);
 } catch (\PDOException $e) {
     // Return empty array if table doesn't exist yet — frontend handles gracefully
     echo json_encode([]);

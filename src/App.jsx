@@ -56,6 +56,9 @@ export default function App() {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [currentHash, setCurrentHash] = useState(window.location.hash);
+  // Ticks every 30s so the live "time ago" labels keep recalculating live,
+  // without needing a page refresh.
+  const [, setClockTick] = useState(0);
 
   // Fetch the admin-managed categories & sub-tags that drive the navbar/sections
   const fetchCategories = async () => {
@@ -106,11 +109,14 @@ export default function App() {
   };
 
   // Relative time for live updates, e.g. "1d 5h 30m ago"
-  const liveTimeAgo = (dateStr) => {
-    if (!dateStr) return '';
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return '';
-    let diff = Math.floor((Date.now() - d.getTime()) / 1000);
+  const liveTimeAgo = (value) => {
+    if (value === null || value === undefined || value === '') return '';
+    // A number is an absolute epoch (seconds) from the API — timezone-safe.
+    // A string falls back to local Date parsing for older data.
+    const ms = typeof value === 'number' ? value * 1000 : new Date(value).getTime();
+    if (isNaN(ms)) return '';
+    let diff = Math.floor((Date.now() - ms) / 1000);
+    if (diff < 0) diff = 0;
     if (diff < 60) return 'Just now';
     const days = Math.floor(diff / 86400); diff %= 86400;
     const hours = Math.floor(diff / 3600); diff %= 3600;
@@ -121,6 +127,12 @@ export default function App() {
     if (mins) parts.push(mins + 'm');
     return parts.join(' ') + ' ago';
   };
+
+  // Re-render every 30 seconds so the live "time ago" labels stay current.
+  useEffect(() => {
+    const id = setInterval(() => setClockTick((t) => t + 1), 30000);
+    return () => clearInterval(id);
+  }, []);
 
   // Handle dark mode side-effect
   useEffect(() => {
@@ -496,7 +508,7 @@ export default function App() {
                           >
                             <div className="live-featured-img-wrapper">
                               <img src={featuredImage} alt={latest.title} className="live-featured-img" />
-                              <span className="live-featured-badge">{liveTimeAgo(latest.created_at)}</span>
+                              <span className="live-featured-badge">{liveTimeAgo(latest.created_ts ?? latest.created_at)}</span>
                               <span className="live-featured-tag">{latest.category || 'Breaking'}</span>
                             </div>
                             <h4 className={`live-featured-title${clickedLiveIds.has(latest.id) ? ' live-visited' : ''}`}>{latest.title}</h4>
@@ -512,7 +524,7 @@ export default function App() {
                         {liveUpdates.slice(1, 5).map((item) => (
                           <div key={item.id} className="live-timeline-item">
                             <div className="live-timeline-node"></div>
-                            <span className="live-time-badge">{liveTimeAgo(item.created_at)}</span>
+                            <span className="live-time-badge">{liveTimeAgo(item.created_ts ?? item.created_at)}</span>
                             <div
                               className={`live-title${clickedLiveIds.has(item.id) ? ' live-visited' : ''}`}
                               onClick={() => handleLiveUpdateClick(item)}

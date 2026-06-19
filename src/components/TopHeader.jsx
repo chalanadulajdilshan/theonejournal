@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import logoImage from '../assets/logo.png';
+import logoImage from '../assets/logo.webp';
 
 export default function TopHeader({ darkMode, toggleDarkMode, siteViews }) {
   const [currentDate, setCurrentDate] = useState('');
@@ -72,10 +72,14 @@ export default function TopHeader({ darkMode, toggleDarkMode, siteViews }) {
                 justifyContent: 'center'
               }}
             >
-              <img 
-                src={logoImage} 
-                alt="The One Journal Logo" 
+              <img
+                src={logoImage}
+                alt="The One Journal Logo"
                 className="brand-logo-img-full"
+                width="2400"
+                height="358"
+                fetchPriority="high"
+                decoding="async"
               />
               <div 
                 className="logo-shine-overlay"
