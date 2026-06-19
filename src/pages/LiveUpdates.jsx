@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
+import RichContent from '../components/RichContent';
 
 const CATEGORIES = ['All', 'General', 'Politics', 'Business', 'Technology', 'Sports', 'Entertainment', 'Health', 'International'];
 
@@ -190,11 +191,11 @@ export default function LiveUpdates({ layoutProps }) {
                         {hasContent && (
                           <div style={{ marginTop: '0.75rem' }}>
                             {isExpanded && (
-                              <div style={{ fontSize: '0.88rem', color: 'var(--text-primary)', lineHeight: 1.75, paddingTop: '0.5rem', borderTop: '1px solid var(--border-color)', marginBottom: '0.75rem' }}>
-                                {update.content.split('\n\n').filter(function(p) { return p.trim(); }).map(function(p, i) {
-                                  return <p key={i} style={{ marginBottom: '0.75rem' }}>{p.trim()}</p>;
-                                })}
-                              </div>
+                              <RichContent
+                                content={update.content}
+                                className="live-rich-content"
+                                style={{ fontSize: '0.88rem', color: 'var(--text-primary)', lineHeight: 1.75, paddingTop: '0.5rem', borderTop: '1px solid var(--border-color)', marginBottom: '0.75rem' }}
+                              />
                             )}
                             <button
                               onClick={function() { toggleExpand(update.id); }}

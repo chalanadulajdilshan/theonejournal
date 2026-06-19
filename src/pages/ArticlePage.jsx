@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import Layout from '../components/Layout';
+import RichContent from '../components/RichContent';
 
 const getYouTubeId = (url) => {
   if (!url) return null;
@@ -27,7 +28,7 @@ export default function ArticlePage({ layoutProps, article }) {
     );
   }
 
-  const paragraphs = article.content ? article.content.split('\n\n').filter(p => p.trim()) : [article.excerpt];
+  const bodyContent = article.content || article.excerpt || '';
   const ytId = getYouTubeId(article.mediaUrl);
 
   return (
@@ -57,11 +58,7 @@ export default function ArticlePage({ layoutProps, article }) {
           <img src={article.image} alt={article.title} className="article-page-img" />
         ) : null}
 
-        <div className="modal-article-text">
-          {paragraphs.map((para, idx) => (
-            <p key={idx}>{para.trim()}</p>
-          ))}
-        </div>
+        <RichContent content={bodyContent} className="modal-article-text" />
       </article>
     </Layout>
   );

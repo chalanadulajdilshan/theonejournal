@@ -1,6 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import Layout from '../components/Layout';
 import ViewsBadge from '../components/ViewsBadge';
+import RichContent from '../components/RichContent';
+
+// Strip HTML tags (and decode entities) to a plain-text snippet for card previews,
+// since job descriptions are now rich HTML.
+const stripHtml = (html) => {
+  if (!html) return '';
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  return (tmp.textContent || tmp.innerText || '').replace(/\s+/g, ' ').trim();
+};
 
 export default function Jobs({ layoutProps }) {
   const [countries, setCountries] = useState(null);
@@ -214,7 +224,7 @@ export default function Jobs({ layoutProps }) {
                       <h3 style={{ margin: 0, fontSize: '1.05rem', lineHeight: 1.3 }}>{job.title}</h3>
                       {job.description && (
                         <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                          {job.description}
+                          {stripHtml(job.description)}
                         </p>
                       )}
                       <span style={{ marginTop: 'auto', fontSize: '0.8rem', fontWeight: 600, color: 'var(--accent-gold)' }}>
@@ -280,11 +290,10 @@ export default function Jobs({ layoutProps }) {
                   {selected.country_name}
                 </div>
               )}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem', lineHeight: 1.75, fontSize: '0.95rem' }}>
-                {(selected.description || '').split('\n\n').filter(p => p.trim()).map((p, i) => (
-                  <p key={i} style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{p.trim()}</p>
-                ))}
-                {!selected.description && <p style={{ margin: 0, color: 'var(--text-muted)' }}>More details coming soon.</p>}
+              <div style={{ lineHeight: 1.75, fontSize: '0.95rem' }}>
+                {selected.description
+                  ? <RichContent content={selected.description} className="job-rich-content" />
+                  : <p style={{ margin: 0, color: 'var(--text-muted)' }}>More details coming soon.</p>}
               </div>
               <div style={{ marginTop: '1.5rem', padding: '1rem', background: 'var(--bg-secondary)', borderRadius: '6px', fontSize: '0.85rem' }}>
                 <strong>How to apply:</strong> Send your CV and a short cover letter to{' '}

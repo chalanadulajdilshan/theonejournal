@@ -2,6 +2,16 @@ import React, { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
 import './admin.css';
 import ImageUploadField from './ImageUploadField';
+import RichTextEditor from './RichTextEditor';
+
+// Strip HTML tags to a plain-text snippet for list previews (descriptions are
+// now rich HTML authored in the editor).
+const stripHtml = (html) => {
+  if (!html) return '';
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  return (tmp.textContent || tmp.innerText || '').replace(/\s+/g, ' ').trim();
+};
 
 // --- YouTube helpers: derive the thumbnail + auto-calculate MM:SS length ---
 const getYouTubeId = (url) => {
@@ -94,17 +104,13 @@ function PasswordInput({ value, onChange, placeholder, autoComplete, required })
 }
 
 export default function AdminPanel({ articles, onRefreshArticles, breakingNews, onRefreshBreaking, darkMode, toggleDarkMode }) {
-  // Auth state - restore from localStorage to survive component unmount
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return localStorage.getItem('admin_authenticated') === 'true';
-  });
-  const [isAdminLoading, setIsAdminLoading] = useState(() => {
-    // If we have a stored session, skip loading screen
-    return localStorage.getItem('admin_authenticated') !== 'true';
-  });
-  const [adminUsername, setAdminUsername] = useState(() => {
-    return localStorage.getItem('admin_username') || '';
-  });
+  // Auth state — the admin panel ALWAYS starts logged out. Every visit (a fresh
+  // page load, returning from the website, or after logging out) requires
+  // entering the username & password again. Nothing is persisted, so there is
+  // no "remembered" auto-login.
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAdminLoading, setIsAdminLoading] = useState(false);
+  const [adminUsername, setAdminUsername] = useState('');
 
   // Login form state
   const [loginUser, setLoginUser] = useState('');
@@ -416,10 +422,6 @@ By using The One Journal, you acknowledge that you have read and agreed to these
   const [headerRates, setHeaderRates] = useState([]);
   const [headerRatesLoading, setHeaderRatesLoading] = useState(false);
 
-  // Check auth status and fetch categories
-  useEffect(() => {
-    checkAuth();
-  }, []);
 
   const addToast = (message, type = 'success') => {
     Swal.mixin({
@@ -506,46 +508,6 @@ By using The One Journal, you acknowledge that you have read and agreed to these
     setHeaderRates(updated);
   };
 
-  const checkAuth = async () => {
-    try {
-      const res = await fetch('/api/check_auth.php');
-      const data = await res.json();
-      if (data.authenticated) {
-        setIsAuthenticated(true);
-        setAdminUsername(data.username);
-        localStorage.setItem('admin_authenticated', 'true');
-        localStorage.setItem('admin_username', data.username);
-        onRefreshArticles();
-        await fetchCategories();
-        await fetchHeaderRates();
-      } else {
-        // Server session expired, but check if we have localStorage session
-        const storedAuth = localStorage.getItem('admin_authenticated');
-        if (storedAuth === 'true') {
-          // Try re-authenticating with stored credentials
-          const storedUser = localStorage.getItem('admin_username') || '';
-          setIsAuthenticated(true);
-          setAdminUsername(storedUser);
-          onRefreshArticles();
-          await fetchCategories();
-          await fetchHeaderRates();
-        } else {
-          setIsAuthenticated(false);
-        }
-      }
-    } catch (err) {
-      console.error('Failed to check auth:', err);
-      // On network error, fall back to localStorage state
-      const storedAuth = localStorage.getItem('admin_authenticated');
-      if (storedAuth === 'true') {
-        setIsAuthenticated(true);
-        setAdminUsername(localStorage.getItem('admin_username') || '');
-      }
-    } finally {
-      setIsAdminLoading(false);
-    }
-  };
-
   const handleLogin = async (e) => {
     e.preventDefault();
     if (!loginUser || !loginPass) {
@@ -567,8 +529,6 @@ By using The One Journal, you acknowledge that you have read and agreed to these
       if (res.ok && data.success) {
         setIsAuthenticated(true);
         setAdminUsername(data.username);
-        localStorage.setItem('admin_authenticated', 'true');
-        localStorage.setItem('admin_username', data.username);
         addToast(`Welcome back, ${data.username}!`, 'success');
         onRefreshArticles();
         await fetchCategories();
@@ -590,8 +550,6 @@ By using The One Journal, you acknowledge that you have read and agreed to these
       if (data.success) {
         setIsAuthenticated(false);
         setAdminUsername('');
-        localStorage.removeItem('admin_authenticated');
-        localStorage.removeItem('admin_username');
         addToast('Logged out successfully.', 'success');
       }
     } catch (err) {
@@ -1523,7 +1481,6 @@ By using The One Journal, you acknowledge that you have read and agreed to these
         addToast('Credentials updated successfully.', 'success');
         if (data.username) {
           setAdminUsername(data.username);
-          localStorage.setItem('admin_username', data.username);
         }
         setAccNewUsername('');
         setAccNewPassword('');
@@ -2629,13 +2586,11 @@ By using The One Journal, you acknowledge that you have read and agreed to these
                     </div>
                     <div className="form-group" style={{ gridColumn: '1 / -1', marginBottom: 0 }}>
                       <label>Description *</label>
-                      <textarea
-                        className="form-textarea"
+                      <RichTextEditor
                         value={jobDescription}
-                        onChange={e => setJobDescription(e.target.value)}
-                        placeholder="Describe the role, responsibilities, requirements, and how to apply. Separate paragraphs with a blank line."
-                        rows={10}
-                        style={{ resize: 'vertical', fontFamily: 'inherit', lineHeight: '1.7' }}
+                        onChange={setJobDescription}
+                        height={360}
+                        placeholder="Describe the role, responsibilities, requirements, and how to apply. Select text to format it, change colour or highlight."
                       />
                     </div>
                     <div className="form-group" style={{ gridColumn: '1 / -1', marginBottom: 0 }}>
@@ -2735,7 +2690,7 @@ By using The One Journal, you acknowledge that you have read and agreed to these
                             <td>
                               <div style={{ fontWeight: 600, fontSize: '0.875rem', marginBottom: item.description ? '0.2rem' : 0 }}>{item.title}</div>
                               {item.description && (
-                                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.description}</div>
+                                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{stripHtml(item.description)}</div>
                               )}
                             </td>
                             <td style={{ textAlign: 'center' }}>
@@ -2985,13 +2940,11 @@ By using The One Journal, you acknowledge that you have read and agreed to these
                     </div>
                     <div className="form-group" style={{ gridColumn: '1 / -1', marginBottom: 0 }}>
                       <label>Full Details / Body <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(shown when reader clicks "Read more")</span></label>
-                      <textarea
-                        className="form-textarea"
+                      <RichTextEditor
                         value={luContent}
-                        onChange={e => setLuContent(e.target.value)}
-                        placeholder="Write the full update details here. Separate paragraphs with a blank line."
-                        rows={8}
-                        style={{ resize: 'vertical', fontFamily: 'inherit', lineHeight: '1.7' }}
+                        onChange={setLuContent}
+                        height={320}
+                        placeholder="Paste or write the full update details here. Select text to format it, change colour or highlight."
                       />
                     </div>
                   </div>
@@ -3274,13 +3227,11 @@ By using The One Journal, you acknowledge that you have read and agreed to these
                 {/* Content */}
                 <div className="form-group">
                   <label htmlFor="form-content">Full Body Content *</label>
-                  <textarea
-                    id="form-content"
-                    className="form-textarea"
+                  <RichTextEditor
                     value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                    placeholder="Write the full story here... Use double newlines for paragraph breaks."
-                    required
+                    onChange={setContent}
+                    height={400}
+                    placeholder="Paste or write the full story here, then select words to make them Bold, Italic, Underline, change the text colour or highlight them."
                   />
                 </div>
 
