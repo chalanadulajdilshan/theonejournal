@@ -16,7 +16,7 @@ const ADVERTISE_ITEM = {
 };
 
 const JOBS_ITEM = {
-  name: 'Jobs',
+  name: 'Foreign Jobs',
   hash: '#jobs',
   jobs: true,
   subcategories: [],
