@@ -2483,16 +2483,31 @@ body.dark-mode .navbar-wrapper {
 }
 
 .modal-article-text {
+  font-family: var(--font-body) !important;
   font-size: 1.05rem;
   line-height: 1.8;
   color: var(--text-primary);
   font-weight: 500;
 }
 
-.modal-article-text p {
+.modal-article-text p,
+.modal-article-text span,
+.modal-article-text li,
+.modal-article-text div {
+  font-family: var(--font-body) !important;
   margin-bottom: 1.5rem;
   font-weight: 500;
   color: var(--text-primary);
+}
+
+.modal-article-text h1,
+.modal-article-text h2,
+.modal-article-text h3,
+.modal-article-text h4,
+.modal-article-text h5,
+.modal-article-text h6 {
+  font-family: var(--font-subheading) !important;
+  font-weight: var(--font-weight-subheading) !important;
 }
 
 .modal-article-text p:first-of-type {
@@ -3246,6 +3261,28 @@ body.dark-mode .partner-content-banner {
    Re-establishes spacing the global reset removes, so formatted article /
    live-update / job HTML renders with readable paragraphs, lists & headings.
    ========================================== */
+.rich-content,
+.rich-content p,
+.rich-content li,
+.rich-content span,
+.rich-content div,
+.rich-content blockquote {
+  font-family: var(--font-body) !important;
+  font-weight: var(--font-weight-body) !important;
+}
+.rich-content h1,
+.rich-content h2,
+.rich-content h3,
+.rich-content h4,
+.rich-content h5,
+.rich-content h6 {
+  font-family: var(--font-subheading) !important;
+  font-weight: var(--font-weight-subheading) !important;
+}
+.rich-content strong,
+.rich-content b {
+  font-weight: 700 !important;
+}
 .rich-content p {
   margin: 0 0 1rem;
 }
