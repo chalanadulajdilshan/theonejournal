@@ -603,9 +603,10 @@ By using The One Journal, you acknowledge that you have read and agreed to these
     setContent('');
     setImage('');
 
-    // Select first category on load
-    if (categoriesList.length > 0) {
-      const firstCat = categoriesList[0];
+    // Select first category on load (skip 'You May Like' — it's auto-populated by views)
+    const selectableCats = categoriesList.filter(c => c.slug !== 'you-may-like');
+    if (selectableCats.length > 0) {
+      const firstCat = selectableCats[0];
       setCategoryId(firstCat.id);
       setCategory(firstCat.name);
       if (firstCat.subcategories && firstCat.subcategories.length > 0) {
@@ -3529,9 +3530,11 @@ By using The One Journal, you acknowledge that you have read and agreed to these
                       required
                     >
                       <option value="0" disabled>Select Category</option>
-                      {categoriesList.map((c) => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))}
+                      {categoriesList
+                        .filter(c => c.slug !== 'you-may-like')
+                        .map((c) => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
                     </select>
                   </div>
 

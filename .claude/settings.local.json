@@ -5,7 +5,8 @@
       "Bash(npx --no-install eslint src/admin/AdminPanel.jsx)",
       "Bash(node -e \"console.log\\(require\\('sharp'\\)?.versions||'no sharp'\\)\")",
       "Bash(npx --yes sharp-cli@4 -i src/assets/logo.webp -o src/assets/logo-optimized.webp -f webp --webp-quality 60 resize 1600)",
-      "Bash(npx --yes sharp-cli@4 -i src/assets/logo.webp -o src/assets/logo-optimized.webp -f webp -q 55 resize 1600)"
+      "Bash(npx --yes sharp-cli@4 -i src/assets/logo.webp -o src/assets/logo-optimized.webp -f webp -q 55 resize 1600)",
+      "Bash(\"C:/xampp/mysql/bin/mysql.exe\" -u root -e \"SELECT a.id, a.title, a.category_id, a.subcategory_id, c.name AS cat, s.name AS sub FROM articles a LEFT JOIN categories c ON a.category_id=c.id LEFT JOIN subcategories s ON a.subcategory_id=s.id ORDER BY a.id;\" news)"
     ]
   }
 }
