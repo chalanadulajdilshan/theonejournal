@@ -25,6 +25,12 @@
   /* Fonts */
   --font-serif: 'Merriweather', Georgia, serif;
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-heading: 'Merriweather', Georgia, serif;
+  --font-subheading: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-weight-heading: 700;
+  --font-weight-subheading: 900;
+  --font-weight-body: 500;
   
   --header-text-color: var(--primary-color);
   
