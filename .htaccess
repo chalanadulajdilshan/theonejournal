@@ -1,0 +1,18 @@
+# Pretty share URLs: /s/<id> internally hits share.php?id=<id>
+# Lets us put short, clean links like https://theonejournal.org/s/art-xxx
+# into WhatsApp/FB messages without the ?share.php?id= clutter.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # /s/<id>             → share.php?id=<id>
+  # /s/<id>/img         → share.php?id=<id>&img=1   (resized JPEG endpoint)
+  # /s/<slug>/<id>      → share.php?id=<id>         (pretty slug-style URL,
+  #                       slug is cosmetic and ignored by the server)
+  # /s/<slug>/<id>/img  → share.php?id=<id>&img=1
+  # More-specific patterns first so e.g. /s/<id>/img isn't mistaken for
+  # /s/<slug>/<id> where the literal "img" would be parsed as an id.
+  RewriteRule ^s/[^/]+/([A-Za-z0-9_-]+)/img/?$ share.php?id=$1&img=1 [L,QSA]
+  RewriteRule ^s/([A-Za-z0-9_-]+)/img/?$ share.php?id=$1&img=1 [L,QSA]
+  RewriteRule ^s/[^/]+/([A-Za-z0-9_-]+)/?$ share.php?id=$1 [L,QSA]
+  RewriteRule ^s/([A-Za-z0-9_-]+)/?$ share.php?id=$1 [L,QSA]
+</IfModule>
