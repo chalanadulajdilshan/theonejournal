@@ -217,6 +217,15 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
   const [countryFormOpen, setCountryFormOpen] = useState(false);
   const [countrySaving, setCountrySaving] = useState(false);
 
+  // Users Manager state
+  const [users, setUsers] = useState([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [editingUserId, setEditingUserId] = useState(null);
+  const [userUsername, setUserUsername] = useState('');
+  const [userPassword, setUserPassword] = useState('');
+  const [userFormOpen, setUserFormOpen] = useState(false);
+  const [userSaving, setUserSaving] = useState(false);
+
   // Account / Credentials Manager state
   const [accNewUsername, setAccNewUsername] = useState('');
   const [accNewPassword, setAccNewPassword] = useState('');
@@ -594,9 +603,10 @@ By using The One Journal, you acknowledge that you have read and agreed to these
     setContent('');
     setImage('');
 
-    // Select first category on load
-    if (categoriesList.length > 0) {
-      const firstCat = categoriesList[0];
+    // Select first category on load (skip 'You May Like' — it's auto-populated by views)
+    const selectableCats = categoriesList.filter(c => c.slug !== 'you-may-like');
+    if (selectableCats.length > 0) {
+      const firstCat = selectableCats[0];
       setCategoryId(firstCat.id);
       setCategory(firstCat.name);
       if (firstCat.subcategories && firstCat.subcategories.length > 0) {
@@ -1446,6 +1456,105 @@ By using The One Journal, you acknowledge that you have read and agreed to these
     });
   };
 
+  // USERS MANAGER HANDLERS
+  const fetchUsers = async () => {
+    setUsersLoading(true);
+    try {
+      const res = await fetch('/api/manage_users.php', { credentials: 'same-origin' });
+      const data = await res.json();
+      setUsers(Array.isArray(data) ? data : []);
+    } catch {
+      addToast('Failed to load users.', 'error');
+    } finally {
+      setUsersLoading(false);
+    }
+  };
+
+  const openAddUser = () => {
+    setEditingUserId(null);
+    setUserUsername('');
+    setUserPassword('');
+    setUserFormOpen(true);
+  };
+
+  const openEditUser = (item) => {
+    setEditingUserId(item.id);
+    setUserUsername(item.username);
+    setUserPassword('');
+    setUserFormOpen(true);
+  };
+
+  const handleSaveUser = async (e) => {
+    e.preventDefault();
+    if (!userUsername.trim()) {
+      addToast('Username is required.', 'error');
+      return;
+    }
+    if (!editingUserId && (!userPassword || userPassword.length < 8)) {
+      addToast('Password must be at least 8 characters.', 'error');
+      return;
+    }
+    if (editingUserId && userPassword && userPassword.length < 8) {
+      addToast('New password must be at least 8 characters.', 'error');
+      return;
+    }
+    setUserSaving(true);
+    const action = editingUserId ? 'edit' : 'add';
+    const payload = { action, username: userUsername.trim(), password: userPassword };
+    if (editingUserId) payload.id = editingUserId;
+    try {
+      const res = await fetch('/api/manage_users.php', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        addToast(editingUserId ? 'User saved.' : 'User added.', 'success');
+        setUserFormOpen(false);
+        fetchUsers();
+      } else {
+        addToast(data.error || 'Failed to save user.', 'error');
+      }
+    } catch {
+      addToast('Network connection failed.', 'error');
+    } finally {
+      setUserSaving(false);
+    }
+  };
+
+  const handleDeleteUser = (id, username) => {
+    Swal.fire({
+      title: 'Delete User?',
+      text: `"${username}" will no longer be able to sign in to the admin panel.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, delete',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#dc3545'
+    }).then(async (r) => {
+      if (!r.isConfirmed) return;
+      try {
+        const res = await fetch('/api/manage_users.php', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'delete', id })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          addToast('User deleted.', 'success');
+          fetchUsers();
+        } else {
+          addToast(data.error || 'Failed to delete.', 'error');
+        }
+      } catch {
+        addToast('Network connection failed.', 'error');
+      }
+    });
+  };
+
   // ACCOUNT / CREDENTIALS HANDLER
   const handleUpdateCredentials = async (e) => {
     e.preventDefault();
@@ -1928,6 +2037,24 @@ By using The One Journal, you acknowledge that you have read and agreed to these
             }}
           >
             Live Updates
+          </button>
+          <button
+            onClick={() => { setActiveTab('users'); fetchUsers(); }}
+            className={`semibold`}
+            style={{
+              background: 'none',
+              border: 'none',
+              borderBottom: activeTab === 'users' ? '3px solid var(--accent-gold)' : '3px solid transparent',
+              color: activeTab === 'users' ? 'var(--text-primary)' : 'var(--text-muted)',
+              padding: '0.75rem 1.5rem',
+              cursor: 'pointer',
+              fontSize: '0.95rem',
+              outline: 'none',
+              transition: 'all var(--transition-fast)',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            Users
           </button>
           <button
             onClick={() => setActiveTab('account')}
@@ -3052,6 +3179,141 @@ By using The One Journal, you acknowledge that you have read and agreed to these
         )}
 
         {/* TAB: ACCOUNT / CREDENTIALS */}
+        {activeTab === 'users' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', animation: 'modalSlideIn 0.2s ease', marginTop: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1rem' }}>Admin Panel Users</h3>
+                <p style={{ margin: '0.25rem 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  Manage the accounts that can sign in to this admin panel. Every user listed here has full access.
+                </p>
+              </div>
+              <button
+                onClick={openAddUser}
+                className="btn-primary"
+                style={{ width: 'auto', padding: '0.5rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem' }}
+              >
+                <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2z"/></svg>
+                New User
+              </button>
+            </div>
+
+            {userFormOpen && (
+              <div style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--accent-gold)', borderRadius: '8px', padding: '1.5rem', boxShadow: 'var(--card-shadow)' }}>
+                <h4 style={{ marginTop: 0, marginBottom: '1.25rem', color: 'var(--accent-gold)' }}>
+                  {editingUserId ? 'Edit User' : 'New User'}
+                </h4>
+                <form onSubmit={handleSaveUser} autoComplete="off">
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label>Username *</label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        value={userUsername}
+                        onChange={e => setUserUsername(e.target.value)}
+                        placeholder="e.g. editor1"
+                        required
+                        autoComplete="off"
+                        style={{ margin: 0 }}
+                      />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label>
+                        Password {editingUserId ? <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(leave blank to keep current)</span> : '*'}
+                      </label>
+                      <PasswordInput
+                        value={userPassword}
+                        onChange={e => setUserPassword(e.target.value)}
+                        placeholder={editingUserId ? '••••••••' : 'Min 8 characters'}
+                        autoComplete="new-password"
+                        required={!editingUserId}
+                      />
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                    <button type="submit" className="btn-primary" style={{ width: 'auto' }} disabled={userSaving}>
+                      {userSaving ? 'Saving...' : (editingUserId ? 'Save Changes' : 'Add User')}
+                    </button>
+                    <button type="button" className="btn-secondary" style={{ width: 'auto' }} onClick={() => setUserFormOpen(false)}>
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            <div style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '6px', boxShadow: 'var(--card-shadow)', overflow: 'hidden' }}>
+              <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>
+                  All Users &nbsp;<span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>({users.length})</span>
+                </span>
+                <button onClick={fetchUsers} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.78rem' }}>
+                  Refresh
+                </button>
+              </div>
+              {usersLoading ? (
+                <div style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>Loading...</div>
+              ) : users.length === 0 ? (
+                <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <p>No users yet. Click <strong>New User</strong> to add one.</p>
+                </div>
+              ) : (
+                <div style={{ overflowX: 'auto' }}>
+                  <table className="admin-table" style={{ margin: 0, borderRadius: 0, border: 'none' }}>
+                    <thead style={{ backgroundColor: 'var(--bg-secondary)' }}>
+                      <tr>
+                        <th style={{ width: '44px', textAlign: 'center' }}>#</th>
+                        <th>Username</th>
+                        <th>Created</th>
+                        <th style={{ width: '110px', textAlign: 'right' }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {users.map((item, idx) => {
+                        const isYou = item.username === adminUsername;
+                        return (
+                          <tr key={item.id}>
+                            <td style={{ textAlign: 'center', color: 'var(--text-muted)', fontWeight: 600, fontSize: '0.8rem' }}>{idx + 1}</td>
+                            <td>
+                              <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>
+                                {item.username}
+                                {isYou && (
+                                  <span style={{ marginLeft: '0.5rem', fontSize: '0.7rem', color: 'var(--accent-gold)', fontWeight: 500 }}>(you)</span>
+                                )}
+                              </div>
+                            </td>
+                            <td style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                              {item.created_at ? new Date(item.created_at.replace(' ', 'T')).toLocaleString() : '—'}
+                            </td>
+                            <td style={{ textAlign: 'right' }}>
+                              <div className="action-buttons" style={{ justifyContent: 'flex-end' }}>
+                                <button onClick={() => openEditUser(item)} className="btn-action-edit" title="Edit">
+                                  <svg width="13" height="13" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708l-3-3zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207l6.5-6.5z"/>
+                                  </svg>
+                                </button>
+                                {!isYou && (
+                                  <button onClick={() => handleDeleteUser(item.id, item.username)} className="btn-action-delete" title="Delete">
+                                    <svg width="13" height="13" fill="currentColor" viewBox="0 0 16 16">
+                                      <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                                      <path fillRule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                                    </svg>
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {activeTab === 'account' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', animation: 'modalSlideIn 0.2s ease', marginTop: '1rem', maxWidth: '560px' }}>
             <div>
@@ -3268,9 +3530,11 @@ By using The One Journal, you acknowledge that you have read and agreed to these
                       required
                     >
                       <option value="0" disabled>Select Category</option>
-                      {categoriesList.map((c) => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))}
+                      {categoriesList
+                        .filter(c => c.slug !== 'you-may-like')
+                        .map((c) => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
                     </select>
                   </div>
 

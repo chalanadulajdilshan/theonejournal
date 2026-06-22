@@ -39,13 +39,13 @@ function mapRowToArticle($row) {
 try {
     // 1. Fetch all articles joined with category and subcategory tables for regular sections
     $stmt = $pdo->query("
-        SELECT 
-            a.*, 
-            c.name AS category_name, 
-            s.name AS subcategory_name 
+        SELECT
+            a.*,
+            COALESCE(c.name, 'Uncategorized') AS category_name,
+            COALESCE(s.name, 'General') AS subcategory_name
         FROM articles a
-        JOIN categories c ON a.category_id = c.id
-        JOIN subcategories s ON a.subcategory_id = s.id
+        LEFT JOIN categories c ON a.category_id = c.id
+        LEFT JOIN subcategories s ON a.subcategory_id = s.id
         ORDER BY a.sort_order ASC, a.id DESC
     ");
     $dbArticles = $stmt->fetchAll();
@@ -74,9 +74,15 @@ try {
     foreach ($dbArticles as $row) {
         $article = mapRowToArticle($row);
         $lowerCat = strtolower(trim($row['category_name']));
-        
-        // Skip adding static 'you may like' articles to response keys to avoid conflicts
+
+        // Static 'You May Like' category articles live in their own bucket so
+        // they don't collide with the dynamic views-based youMayLike section
+        // (which is populated below) but still surface in the admin listing.
         if ($lowerCat === 'you may like') {
+            if (!isset($response['youMayLikeStatic'])) {
+                $response['youMayLikeStatic'] = [];
+            }
+            $response['youMayLikeStatic'][] = $article;
             continue;
         }
 
@@ -96,13 +102,13 @@ try {
     // 2. Fetch top 5 most viewed articles dynamically for the "You May Like" section
     //    Only articles that have been clicked at least once will appear (starts empty)
     $stmtLike = $pdo->query("
-        SELECT 
-            a.*, 
-            c.name AS category_name, 
-            s.name AS subcategory_name 
+        SELECT
+            a.*,
+            COALESCE(c.name, 'Uncategorized') AS category_name,
+            COALESCE(s.name, 'General') AS subcategory_name
         FROM articles a
-        JOIN categories c ON a.category_id = c.id
-        JOIN subcategories s ON a.subcategory_id = s.id
+        LEFT JOIN categories c ON a.category_id = c.id
+        LEFT JOIN subcategories s ON a.subcategory_id = s.id
         WHERE a.views_count > 0
         ORDER BY a.views_count DESC, a.last_clicked_at DESC
         LIMIT 5

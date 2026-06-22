@@ -11,7 +11,8 @@ html {
 }
 
 body {
-  font-family: var(--font-sans);
+  font-family: var(--font-body);
+  font-weight: var(--font-weight-body);
   background-color: var(--bg-primary);
   color: var(--text-primary);
   line-height: 1.6;
@@ -23,10 +24,29 @@ body {
 
 /* Typography Base */
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-serif);
-  font-weight: 700;
+  font-family: var(--font-heading);
+  font-weight: var(--font-weight-heading);
   color: var(--text-primary);
   line-height: 1.25;
+}
+
+/* Subheadings - Inter Black */
+.subheading,
+.sub-heading,
+h2.subheading,
+h3.subheading,
+h4.subheading,
+h5.subheading,
+h6.subheading,
+.section-subtitle,
+.eyebrow,
+.kicker {
+  font-family: var(--font-subheading);
+  font-weight: var(--font-weight-subheading);
+}
+
+p, span, li, a, label, small, div {
+  font-weight: var(--font-weight-body);
 }
 
 a {
@@ -36,7 +56,8 @@ a {
 }
 
 button {
-  font-family: var(--font-sans);
+  font-family: var(--font-body);
+  font-weight: var(--font-weight-body);
   border: none;
   background: none;
   cursor: pointer;
@@ -45,7 +66,8 @@ button {
 }
 
 input, textarea, select {
-  font-family: var(--font-sans);
+  font-family: var(--font-body);
+  font-weight: var(--font-weight-body);
   outline: none;
 }
 
