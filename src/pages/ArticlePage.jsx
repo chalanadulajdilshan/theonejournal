@@ -142,7 +142,14 @@ export default function ArticlePage({ layoutProps, article }) {
           <span className="bold text-secondary" style={{ fontSize: '0.85rem' }}>Share this article:</span>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             {(() => {
-              const shareUrl = encodeURIComponent(window.location.href);
+              // Use the server-rendered /share.php endpoint so social crawlers
+              // (Facebook, WhatsApp, Twitter/X, LinkedIn) see the article's
+              // Open Graph image + title in link previews. JS-injected meta
+              // tags don't work — crawlers don't execute JavaScript.
+              const sharePageUrl = article.id
+                ? `${window.location.origin}/share.php?id=${encodeURIComponent(article.id)}`
+                : window.location.href;
+              const shareUrl = encodeURIComponent(sharePageUrl);
               const shareTitle = encodeURIComponent(article.title || '');
               const platforms = [
                 { name: 'Facebook', href: `https://www.facebook.com/sharer/sharer.php?u=${shareUrl}&quote=${shareTitle}` },

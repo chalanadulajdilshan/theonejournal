@@ -221,7 +221,10 @@ export default function ArticleDetailModal({ article, onClose }) {
             <span className="bold text-secondary" style={{ fontSize: '0.85rem' }}>Share this article:</span>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               {(() => {
-                const shareUrl = encodeURIComponent(window.location.href);
+                const sharePageUrl = article.id
+                  ? `${window.location.origin}/share.php?id=${encodeURIComponent(article.id)}`
+                  : window.location.href;
+                const shareUrl = encodeURIComponent(sharePageUrl);
                 const shareTitle = encodeURIComponent(article.title || '');
                 const platforms = [
                   { name: 'Facebook', href: `https://www.facebook.com/sharer/sharer.php?u=${shareUrl}&quote=${shareTitle}` },
