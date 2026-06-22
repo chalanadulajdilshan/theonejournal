@@ -100,7 +100,7 @@ export default function Footer({ categories = [] }) {
           </div>
 
           {/* Other sections */}
-          <div style={{ paddingLeft: '6rem' }}>
+          <div className="footer-col footer-col-sections">
             <h3 className="footer-col-title">Other Sections</h3>
             <ul className="footer-links-list">
               <li><a href="#about-us">About Us</a></li>
@@ -111,9 +111,9 @@ export default function Footer({ categories = [] }) {
           </div>
 
           {/* Company links (heading hidden, kept for column alignment) */}
-          <div style={{ textAlign: 'center' }}>
-            <h3 className="footer-col-title" style={{ visibility: 'hidden' }}>Company</h3>
-            <ul className="footer-links-list" style={{ alignItems: 'center' }}>
+          <div className="footer-col footer-col-company">
+            <h3 className="footer-col-title footer-col-title-hidden">Company</h3>
+            <ul className="footer-links-list">
               <li><a href="#contact-us">Contact Us</a></li>
               <li><a href="#advertise">Advertise With Us</a></li>
               <li><a href="#meet-our-team">Meet Our Team</a></li>
