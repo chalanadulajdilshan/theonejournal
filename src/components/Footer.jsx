@@ -1,5 +1,6 @@
 import React from 'react';
-import footerLogo from '../assets/footer_logo.webp';
+
+const footerLogo = '/footer_logo.webp';
 
 export default function Footer({ categories = [] }) {
   const socialLinks = [

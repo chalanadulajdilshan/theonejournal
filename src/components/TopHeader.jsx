@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import logoImage from '../assets/logo.webp';
+
+const logoImage = '/logo.webp';
 
 export default function TopHeader({ darkMode, toggleDarkMode, siteViews }) {
   const [currentDate, setCurrentDate] = useState('');
