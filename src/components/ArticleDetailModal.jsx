@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import Swal from 'sweetalert2';
 
 const getYouTubeId = (url) => {
   if (!url) return null;
@@ -218,35 +217,39 @@ export default function ArticleDetailModal({ article, onClose }) {
           </div>
 
           {/* Social shares */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem', marginTop: '2rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem', marginTop: '2rem', flexWrap: 'wrap' }}>
             <span className="bold text-secondary" style={{ fontSize: '0.85rem' }}>Share this article:</span>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
-              {['Facebook', 'Twitter', 'LinkedIn', 'WhatsApp'].map((platform, pIdx) => (
-                <button
-                  key={pIdx}
-                  style={{
-                    padding: '0.4rem 0.8rem',
-                    backgroundColor: 'var(--bg-secondary)',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '2px',
-                    fontSize: '0.75rem',
-                    fontWeight: 600
-                  }}
-                  onClick={() => {
-                    Swal.fire({
-                      title: 'Shared!',
-                      text: `Article shared on ${platform}.`,
-                      icon: 'success',
-                      timer: 1500,
-                      showConfirmButton: false,
-                      background: document.body.classList.contains('dark-mode') ? '#1e293b' : '#ffffff',
-                      color: document.body.classList.contains('dark-mode') ? '#f8fafc' : '#121212',
-                    });
-                  }}
-                >
-                  {platform}
-                </button>
-              ))}
+              {(() => {
+                const shareUrl = encodeURIComponent(window.location.href);
+                const shareTitle = encodeURIComponent(article.title || '');
+                const platforms = [
+                  { name: 'Facebook', href: `https://www.facebook.com/sharer/sharer.php?u=${shareUrl}&quote=${shareTitle}` },
+                  { name: 'WhatsApp', href: `https://api.whatsapp.com/send?text=${shareTitle}%20${shareUrl}` },
+                  { name: 'X', href: `https://twitter.com/intent/tweet?url=${shareUrl}&text=${shareTitle}` },
+                ];
+                return platforms.map((p) => (
+                  <a
+                    key={p.name}
+                    href={p.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      padding: '0.4rem 0.8rem',
+                      backgroundColor: 'var(--bg-secondary)',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '2px',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      color: 'inherit',
+                      textDecoration: 'none',
+                      display: 'inline-block'
+                    }}
+                  >
+                    {p.name}
+                  </a>
+                ));
+              })()}
             </div>
           </div>
         </div>

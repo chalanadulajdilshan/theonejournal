@@ -469,7 +469,7 @@ export default function App() {
             <div id="section-you-may-like" className="you-may-like-live-split">
               {/* Left Column: You May Like (2/3 width) */}
               <div className="you-may-like-column">
-                <SectionHeader title="You May Like" id="you-may-like" viewAllLink="#category-uae" />
+                <SectionHeader title="Trending" id="you-may-like" viewAllLink="#category-uae" />
                 <div className="you-may-like-grid-3">
                   {getYouMayLikeArticles().map((art) => (
                     <ArticleCard key={art.id} article={art} onClick={handleArticleClick} />
