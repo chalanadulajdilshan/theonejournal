@@ -32,6 +32,9 @@ $isSponsored = isset($input['isSponsored']) && $input['isSponsored'] ? 1 : 0;
 $mediaType = !empty($input['mediaType']) ? trim($input['mediaType']) : null;
 $duration = !empty($input['duration']) ? trim($input['duration']) : null;
 $mediaUrl = !empty($input['mediaUrl']) ? trim($input['mediaUrl']) : null;
+$seoTitle = !empty($input['seoTitle']) ? trim($input['seoTitle']) : null;
+$metaDescription = !empty($input['metaDescription']) ? trim($input['metaDescription']) : null;
+$seoTags = !empty($input['seoTags']) ? trim($input['seoTags']) : null;
 
 // Validation
 if (empty($articleId)) {
@@ -74,11 +77,14 @@ try {
         date = ?, 
         read_time = ?, 
         is_sponsored = ?, 
-        media_type = ?, 
+        media_type = ?,
         duration = ?,
-        media_url = ?
+        media_url = ?,
+        seo_title = ?,
+        meta_description = ?,
+        seo_tags = ?
         WHERE article_id = ?");
-    
+
     $stmtUpdate->execute([
         $title,
         $excerpt,
@@ -93,6 +99,9 @@ try {
         $mediaType,
         $duration,
         $mediaUrl,
+        $seoTitle,
+        $metaDescription,
+        $seoTags,
         $articleId
     ]);
 
@@ -113,7 +122,10 @@ try {
             'isSponsored' => (bool)$isSponsored,
             'mediaType' => $mediaType,
             'duration' => $duration,
-            'mediaUrl' => $mediaUrl
+            'mediaUrl' => $mediaUrl,
+            'seoTitle' => $seoTitle,
+            'metaDescription' => $metaDescription,
+            'seoTags' => $seoTags
         ]
     ]);
 } catch (\PDOException $e) {

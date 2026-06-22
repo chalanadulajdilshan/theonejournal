@@ -15,6 +15,18 @@
   margin: 0.85rem 0 1rem;
 }
 
+/* Standfirst / deck — the meta description shown as a lead summary under the
+   headline. */
+.article-page-deck {
+  font-size: 1.2rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  font-weight: 400;
+  margin: 0 0 1.25rem;
+  padding-left: 1rem;
+  border-left: 3px solid var(--accent-gold);
+}
+
 .article-page-meta {
   display: flex;
   align-items: center;
@@ -25,6 +37,51 @@
   padding-bottom: 1.5rem;
   margin-bottom: 1.75rem;
   border-bottom: 1px solid var(--border-color);
+}
+
+/* Topics / SEO tags shown as chips at the end of the article. */
+.article-page-tags {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.article-page-tags-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+}
+
+.article-tag-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.article-tag-chip {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--primary-color);
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  padding: 0.35rem 0.85rem;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.article-tag-chip:hover {
+  background-color: var(--accent-gold);
+  color: var(--primary-color);
+  border-color: var(--accent-gold);
 }
 
 .article-page-img {

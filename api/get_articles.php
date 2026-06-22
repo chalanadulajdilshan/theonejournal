@@ -33,6 +33,15 @@ function mapRowToArticle($row) {
     if (isset($row['media_url']) && $row['media_url'] !== null) {
         $article['mediaUrl'] = $row['media_url'];
     }
+    if (isset($row['seo_title']) && $row['seo_title'] !== null) {
+        $article['seoTitle'] = $row['seo_title'];
+    }
+    if (isset($row['meta_description']) && $row['meta_description'] !== null) {
+        $article['metaDescription'] = $row['meta_description'];
+    }
+    if (isset($row['seo_tags']) && $row['seo_tags'] !== null) {
+        $article['seoTags'] = $row['seo_tags'];
+    }
     return $article;
 }
 

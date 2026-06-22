@@ -88,6 +88,20 @@
   box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.15);
 }
 
+/* Auto-growing single-line fields (title/excerpt) rendered as textareas:
+   wrap and expand in height so long text is fully visible instead of being
+   clipped on one scrolling line. */
+textarea.form-input {
+  display: block;
+  resize: none;
+  overflow: hidden;
+  min-height: 0;
+  font-family: var(--font-sans);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 /* Hide native browser password reveal/clear icons so they don't overlap the
    custom show/hide toggle button. */
 .form-input::-ms-reveal,
@@ -476,7 +490,7 @@ body.dark-mode .badge-cat {
   border-radius: 8px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
   width: 100%;
-  max-width: 800px;
+  max-width: 1040px;
   max-height: 90vh;
   display: flex;
   flex-direction: column;

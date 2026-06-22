@@ -30,6 +30,9 @@ $isSponsored = isset($input['isSponsored']) && $input['isSponsored'] ? 1 : 0;
 $mediaType = !empty($input['mediaType']) ? trim($input['mediaType']) : null;
 $duration = !empty($input['duration']) ? trim($input['duration']) : null;
 $mediaUrl = !empty($input['mediaUrl']) ? trim($input['mediaUrl']) : null;
+$seoTitle = !empty($input['seoTitle']) ? trim($input['seoTitle']) : null;
+$metaDescription = !empty($input['metaDescription']) ? trim($input['metaDescription']) : null;
+$seoTags = !empty($input['seoTags']) ? trim($input['seoTags']) : null;
 
 // Validation
 if (empty($title) || empty($excerpt) || empty($content) || empty($image) || empty($categoryId) || empty($subcategoryId) || empty($author)) {
@@ -45,10 +48,10 @@ $date = !empty($input['date']) ? trim($input['date']) : date("F d, Y");
 $articleId = uniqid('art-');
 
 try {
-    $stmt = $pdo->prepare("INSERT INTO articles 
-        (article_id, title, excerpt, content, image, category_id, subcategory_id, author, date, read_time, is_sponsored, media_type, duration, media_url)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-    
+    $stmt = $pdo->prepare("INSERT INTO articles
+        (article_id, title, excerpt, content, image, category_id, subcategory_id, author, date, read_time, is_sponsored, media_type, duration, media_url, seo_title, meta_description, seo_tags)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+
     $stmt->execute([
         $articleId,
         $title,
@@ -63,7 +66,10 @@ try {
         $isSponsored,
         $mediaType,
         $duration,
-        $mediaUrl
+        $mediaUrl,
+        $seoTitle,
+        $metaDescription,
+        $seoTags
     ]);
 
     echo json_encode([
@@ -83,7 +89,10 @@ try {
             'isSponsored' => (bool)$isSponsored,
             'mediaType' => $mediaType,
             'duration' => $duration,
-            'mediaUrl' => $mediaUrl
+            'mediaUrl' => $mediaUrl,
+            'seoTitle' => $seoTitle,
+            'metaDescription' => $metaDescription,
+            'seoTags' => $seoTags
         ]
     ]);
 } catch (\PDOException $e) {

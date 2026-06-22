@@ -103,6 +103,39 @@ function PasswordInput({ value, onChange, placeholder, autoComplete, required })
   );
 }
 
+// Textarea that auto-grows in height to fit its content so long titles and
+// excerpts are fully visible instead of being clipped on a single scrolling
+// line. Behaves like a single-line field (Enter blocked) when singleLine.
+function AutoGrowTextarea({ value, singleLine = false, onKeyDown, ...props }) {
+  const ref = React.useRef(null);
+
+  const resize = (el) => {
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  };
+
+  // Re-fit whenever the value changes, including when the modal opens with
+  // existing content during an edit.
+  useEffect(() => {
+    resize(ref.current);
+  }, [value]);
+
+  return (
+    <textarea
+      ref={ref}
+      rows={1}
+      value={value}
+      onInput={(e) => resize(e.target)}
+      onKeyDown={(e) => {
+        if (singleLine && e.key === 'Enter') e.preventDefault();
+        onKeyDown?.(e);
+      }}
+      {...props}
+    />
+  );
+}
+
 export default function AdminPanel({ articles, onRefreshArticles, breakingNews, onRefreshBreaking, darkMode, toggleDarkMode }) {
   // Auth state — the admin panel ALWAYS starts logged out. Every visit (a fresh
   // page load, returning from the website, or after logging out) requires
@@ -156,6 +189,10 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
   const [mediaType, setMediaType] = useState(''); // 'video' | 'podcast' | ''
   const [duration, setDuration] = useState('');
   const [mediaUrl, setMediaUrl] = useState('');
+  // SEO metadata
+  const [seoTitle, setSeoTitle] = useState('');
+  const [metaDescription, setMetaDescription] = useState('');
+  const [seoTags, setSeoTags] = useState('');
 
   // Category Manager tab states
   const [selectedManagerCat, setSelectedManagerCat] = useState(null);
@@ -629,6 +666,9 @@ By using The One Journal, you acknowledge that you have read and agreed to these
     setMediaType('');
     setDuration('');
     setMediaUrl('');
+    setSeoTitle('');
+    setMetaDescription('');
+    setSeoTags('');
     setIsFormOpen(true);
   };
 
@@ -650,6 +690,9 @@ By using The One Journal, you acknowledge that you have read and agreed to these
     setMediaType(art.mediaType || '');
     setDuration(art.duration || '');
     setMediaUrl(art.mediaUrl || '');
+    setSeoTitle(art.seoTitle || '');
+    setMetaDescription(art.metaDescription || '');
+    setSeoTags(art.seoTags || '');
     setIsFormOpen(true);
   };
 
@@ -689,7 +732,10 @@ By using The One Journal, you acknowledge that you have read and agreed to these
       isSponsored: isSponsored ? 1 : 0,
       mediaType: category.toLowerCase() === 'videos & podcasts' ? mediaType : null,
       duration: category.toLowerCase() === 'videos & podcasts' ? duration : null,
-      mediaUrl: category.toLowerCase() === 'videos & podcasts' ? mediaUrl : null
+      mediaUrl: category.toLowerCase() === 'videos & podcasts' ? mediaUrl : null,
+      seoTitle,
+      metaDescription,
+      seoTags
     };
 
     if (formMode === 'edit') {
@@ -3461,13 +3507,13 @@ By using The One Journal, you acknowledge that you have read and agreed to these
                 {/* Title */}
                 <div className="form-group">
                   <label htmlFor="form-title">Article Title *</label>
-                  <input
+                  <AutoGrowTextarea
                     id="form-title"
-                    type="text"
                     className="form-input"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="Enter article headline..."
+                    singleLine
                     required
                   />
                 </div>
@@ -3475,13 +3521,13 @@ By using The One Journal, you acknowledge that you have read and agreed to these
                 {/* Excerpt */}
                 <div className="form-group">
                   <label htmlFor="form-excerpt">Short Excerpt (Intro text) *</label>
-                  <input
+                  <AutoGrowTextarea
                     id="form-excerpt"
-                    type="text"
                     className="form-input"
                     value={excerpt}
                     onChange={(e) => setExcerpt(e.target.value)}
                     placeholder="Summarize the article in a single sentence..."
+                    singleLine
                     required
                   />
                 </div>
@@ -3494,6 +3540,43 @@ By using The One Journal, you acknowledge that you have read and agreed to these
                     onChange={setContent}
                     height={400}
                     placeholder="Paste or write the full story here, then select words to make them Bold, Italic, Underline, change the text colour or highlight them."
+                  />
+                </div>
+
+                {/* SEO metadata (optional — used for search engines / sharing) */}
+                <div className="form-group">
+                  <label htmlFor="form-seo-title">SEO Title</label>
+                  <input
+                    id="form-seo-title"
+                    type="text"
+                    className="form-input"
+                    value={seoTitle}
+                    onChange={(e) => setSeoTitle(e.target.value)}
+                    placeholder="Custom title for search engines (defaults to the article title if left blank)..."
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="form-meta-description">Meta Description</label>
+                  <textarea
+                    id="form-meta-description"
+                    className="form-textarea"
+                    value={metaDescription}
+                    onChange={(e) => setMetaDescription(e.target.value)}
+                    placeholder="Short summary shown in search results (recommended ~150-160 characters)..."
+                    style={{ minHeight: 90 }}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="form-seo-tags">SEO Tags</label>
+                  <input
+                    id="form-seo-tags"
+                    type="text"
+                    className="form-input"
+                    value={seoTags}
+                    onChange={(e) => setSeoTags(e.target.value)}
+                    placeholder="Comma-separated keywords, e.g. aviation, sustainability, net-zero..."
                   />
                 </div>
 
