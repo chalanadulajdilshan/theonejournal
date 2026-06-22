@@ -32,7 +32,7 @@ export default function RichTextEditor({ value, onChange, height = 340, placehol
         // (blocks), font size, alignment and lists for general manual editing.
         toolbar:
           'undo redo | blocks fontsize | bold italic underline | forecolor backcolor | ' +
-          'alignleft aligncenter alignright | bullist numlist | link removeformat',
+          'alignleft aligncenter alignright alignjustify | bullist numlist | link removeformat',
         // Keep pasted formatting (bold/italic/etc.) but strip Word/Google-Docs
         // inline font-family and font-size so the site typography (set by the
         // chosen block type — Paragraph / Heading 1-6) actually wins on the
