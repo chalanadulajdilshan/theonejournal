@@ -80,7 +80,8 @@ export default function TopHeader({ darkMode, toggleDarkMode, siteViews }) {
                 width="1600"
                 height="239"
                 fetchPriority="high"
-                decoding="async"
+                decoding="sync"
+                loading="eager"
               />
               <div 
                 className="logo-shine-overlay"

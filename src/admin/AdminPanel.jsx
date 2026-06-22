@@ -3504,6 +3504,43 @@ By using The One Journal, you acknowledge that you have read and agreed to these
             <form onSubmit={handleFormSubmit} style={{ display: 'flex', flexDirection: 'column', flexGrow: 1, overflow: 'hidden' }}>
               <div className="modal-form-body">
 
+                {/* SEO metadata (optional — used for search engines / sharing) */}
+                <div className="form-group">
+                  <label htmlFor="form-seo-title">SEO Title</label>
+                  <input
+                    id="form-seo-title"
+                    type="text"
+                    className="form-input"
+                    value={seoTitle || title}
+                    onChange={(e) => setSeoTitle(e.target.value)}
+                    placeholder={title || 'Custom title for search engines (defaults to the article title if left blank)...'}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="form-meta-description">Meta Description</label>
+                  <textarea
+                    id="form-meta-description"
+                    className="form-textarea"
+                    value={metaDescription}
+                    onChange={(e) => setMetaDescription(e.target.value)}
+                    placeholder="Short summary shown in search results (recommended ~150-160 characters)..."
+                    style={{ minHeight: 90 }}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="form-seo-tags">SEO Tags</label>
+                  <input
+                    id="form-seo-tags"
+                    type="text"
+                    className="form-input"
+                    value={seoTags}
+                    onChange={(e) => setSeoTags(e.target.value)}
+                    placeholder="Comma-separated keywords, e.g. aviation, sustainability, net-zero..."
+                  />
+                </div>
+
                 {/* Title */}
                 <div className="form-group">
                   <label htmlFor="form-title">Article Title *</label>
@@ -3540,43 +3577,6 @@ By using The One Journal, you acknowledge that you have read and agreed to these
                     onChange={setContent}
                     height={400}
                     placeholder="Paste or write the full story here, then select words to make them Bold, Italic, Underline, change the text colour or highlight them."
-                  />
-                </div>
-
-                {/* SEO metadata (optional — used for search engines / sharing) */}
-                <div className="form-group">
-                  <label htmlFor="form-seo-title">SEO Title</label>
-                  <input
-                    id="form-seo-title"
-                    type="text"
-                    className="form-input"
-                    value={seoTitle}
-                    onChange={(e) => setSeoTitle(e.target.value)}
-                    placeholder="Custom title for search engines (defaults to the article title if left blank)..."
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="form-meta-description">Meta Description</label>
-                  <textarea
-                    id="form-meta-description"
-                    className="form-textarea"
-                    value={metaDescription}
-                    onChange={(e) => setMetaDescription(e.target.value)}
-                    placeholder="Short summary shown in search results (recommended ~150-160 characters)..."
-                    style={{ minHeight: 90 }}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="form-seo-tags">SEO Tags</label>
-                  <input
-                    id="form-seo-tags"
-                    type="text"
-                    className="form-input"
-                    value={seoTags}
-                    onChange={(e) => setSeoTags(e.target.value)}
-                    placeholder="Comma-separated keywords, e.g. aviation, sustainability, net-zero..."
                   />
                 </div>
 

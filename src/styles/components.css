@@ -18,8 +18,8 @@
 /* Standfirst / deck — the meta description shown as a lead summary under the
    headline. */
 .article-page-deck {
-  font-size: 1.2rem;
-  line-height: 1.6;
+  font-size: 1rem;
+  line-height: 1.55;
   color: var(--text-secondary);
   font-weight: 400;
   margin: 0 0 1.25rem;
@@ -32,7 +32,7 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 0.6rem;
-  font-size: 0.9rem;
+  font-size: 0.78rem;
   color: var(--text-secondary);
   padding-bottom: 1.5rem;
   margin-bottom: 1.75rem;
@@ -3364,16 +3364,17 @@ body.dark-mode .partner-content-banner {
 .rich-content blockquote {
   font-family: var(--font-body) !important;
   font-weight: var(--font-weight-body) !important;
-  font-size: 1rem !important;
-  line-height: 1.75 !important;
+  line-height: 1.75;
 }
-/* Defeat inline `font-family`/`font-size` left behind by Word/Google-Docs
-   paste (MsoNormal spans etc.) so the block type chosen in the editor —
-   Paragraph or Heading 1-6 — actually drives the typography on the page. */
+.rich-content {
+  font-size: 1rem;
+}
+/* Defeat inline `font-family` left behind by Word/Google-Docs paste
+   (MsoNormal spans etc.) so pasted text inherits the site's typography.
+   We deliberately keep inline font-size/line-height so the editor's font-size
+   dropdown (12pt, 24pt, etc.) actually drives the rendered size. */
 .rich-content span[style] {
   font-family: inherit !important;
-  font-size: inherit !important;
-  line-height: inherit !important;
 }
 /* H1 + H2 are "headings" → Merriweather (serif).
    H3-H6 are "sub-headings" → Inter Black (var --font-subheading).
