@@ -3269,15 +3269,42 @@ body.dark-mode .partner-content-banner {
 .rich-content blockquote {
   font-family: var(--font-body) !important;
   font-weight: var(--font-weight-body) !important;
+  font-size: 1rem !important;
+  line-height: 1.75 !important;
 }
+/* Defeat inline `font-family`/`font-size` left behind by Word/Google-Docs
+   paste (MsoNormal spans etc.) so the block type chosen in the editor —
+   Paragraph or Heading 1-6 — actually drives the typography on the page. */
+.rich-content span[style] {
+  font-family: inherit !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+}
+/* H1 + H2 are "headings" → Merriweather (serif).
+   H3-H6 are "sub-headings" → Inter Black (var --font-subheading).
+   Paragraphs / body → Inter Medium (var --font-body) — already set above. */
 .rich-content h1,
-.rich-content h2,
+.rich-content h2 {
+  font-family: var(--font-heading) !important;
+  font-weight: var(--font-weight-heading) !important;
+}
 .rich-content h3,
 .rich-content h4,
 .rich-content h5,
 .rich-content h6 {
   font-family: var(--font-subheading) !important;
   font-weight: var(--font-weight-subheading) !important;
+}
+.rich-content h1 { font-size: 2.25rem !important; line-height: 1.25 !important; }
+.rich-content h2 { font-size: 1.75rem !important; line-height: 1.3 !important; }
+.rich-content h3 { font-size: 1.4rem !important; line-height: 1.35 !important; }
+.rich-content h4 { font-size: 1.15rem !important; line-height: 1.4 !important; }
+.rich-content h5 { font-size: 1rem !important; line-height: 1.45 !important; }
+.rich-content h6 {
+  font-size: 0.85rem !important;
+  line-height: 1.5 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 .rich-content strong,
 .rich-content b {
