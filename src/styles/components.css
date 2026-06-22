@@ -2727,6 +2727,23 @@ body.dark-mode .navbar-wrapper {
   padding-left: 0.25rem;
 }
 
+/* Desktop column alignment (previously inline styles) */
+.footer-col-sections {
+  padding-left: 6rem;
+}
+
+.footer-col-company {
+  text-align: center;
+}
+
+.footer-col-company .footer-links-list {
+  align-items: center;
+}
+
+.footer-col-title-hidden {
+  visibility: hidden;
+}
+
 
 
 .footer-social-row {
@@ -2799,7 +2816,28 @@ body.dark-mode .navbar-wrapper {
     grid-template-columns: 1fr;
     gap: 2rem;
   }
-  
+
+  /* On mobile, merge the company links into the "Other Sections"
+     area as one continuous, left-aligned list */
+  .footer-col-sections {
+    padding-left: 0;
+  }
+
+  .footer-col-company {
+    text-align: left;
+    /* pull up to cancel the grid row gap so the links flow directly
+       under the Other Sections list with the normal list spacing */
+    margin-top: calc(-2rem + 0.85rem);
+  }
+
+  .footer-col-company .footer-links-list {
+    align-items: flex-start;
+  }
+
+  .footer-col-title-hidden {
+    display: none;
+  }
+
   .footer-bottom-row {
     flex-direction: column;
     text-align: center;
