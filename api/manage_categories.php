@@ -160,6 +160,32 @@ try {
             echo json_encode(['success' => true, 'message' => 'Sub-tag and its articles deleted successfully.']);
             break;
 
+        case 'set_category_translations':
+        case 'set_subcategory_translations': {
+            $id = intval($input['id'] ?? 0);
+            $translations = $input['translations'] ?? null;
+            if (empty($id) || !is_array($translations)) {
+                header('HTTP/1.1 400 Bad Request');
+                echo json_encode(['error' => 'ID and translations object are required.']);
+                exit;
+            }
+            // Keep only non-empty string values keyed by short locale codes.
+            $clean = [];
+            foreach ($translations as $code => $val) {
+                $code = strtolower(trim((string)$code));
+                $val = trim((string)$val);
+                if ($code === '' || $val === '') continue;
+                if (!preg_match('/^[a-z]{2}(-[a-z0-9]{2,8})?$/', $code)) continue;
+                $clean[$code] = $val;
+            }
+            $json = $clean ? json_encode($clean, JSON_UNESCAPED_UNICODE) : null;
+            $table = $action === 'set_category_translations' ? 'categories' : 'subcategories';
+            $stmt = $pdo->prepare("UPDATE `$table` SET translations = ? WHERE id = ?");
+            $stmt->execute([$json, $id]);
+            echo json_encode(['success' => true, 'translations' => (object)$clean]);
+            break;
+        }
+
         default:
             header('HTTP/1.1 400 Bad Request');
             echo json_encode(['error' => 'Invalid action.']);

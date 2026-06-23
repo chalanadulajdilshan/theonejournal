@@ -101,6 +101,7 @@ export default function ArticlePage({ layoutProps, article }) {
   const bodyContent = article.content || '';
   const ytId = getYouTubeId(article.mediaUrl);
   const intro = (article.excerpt || '').trim();
+  const metaDeck = (article.metaDescription || '').trim();
   const imageCredit = (article.imageCredit || '').trim();
   const tagList = (article.seoTags || '')
     .split(',')
@@ -137,6 +138,7 @@ export default function ArticlePage({ layoutProps, article }) {
         )}
 
         {intro && <p className="article-page-deck">{intro}</p>}
+        {metaDeck && <p className="article-page-summary">{metaDeck}</p>}
 
         <div className="article-page-meta" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
           <span className="modal-author-avatar">{(article.author || 'T').charAt(0)}</span>

@@ -1,8 +1,10 @@
 import React from 'react';
+import { useI18n } from '../i18n/I18nContext';
 
 const footerLogo = '/footer_logo.webp';
 
 export default function Footer({ categories = [] }) {
+  const { t, localized } = useI18n();
   const socialLinks = [
     { 
       label: 'Facebook', 
@@ -75,7 +77,7 @@ export default function Footer({ categories = [] }) {
             {categories.map((cat, idx) => (
               <React.Fragment key={cat.id}>
                 {idx > 0 && <span className="divider">|</span>}
-                <a href={`#category-${cat.slug}`}>{cat.name}</a>
+                <a href={`#category-${cat.slug}`}>{localized(cat)}</a>
               </React.Fragment>
             ))}
           </div>
@@ -89,7 +91,7 @@ export default function Footer({ categories = [] }) {
           <div className="footer-brand">
             <img src={footerLogo} alt="The One Journal Crest Logo" className="footer-crest-logo" width="130" height="130" loading="lazy" decoding="async" />
             <p className="footer-desc">
-              The One Journal is your premier source for breaking news, in-depth reports, business insights, technological developments, and global updates. We deliver accurate, timely, and trusted journalism directly to our readers.
+              {t('footer.description')}
             </p>
             <div className="footer-social-row">
               {socialLinks.map((social, idx) => (
@@ -102,23 +104,23 @@ export default function Footer({ categories = [] }) {
 
           {/* Other sections */}
           <div className="footer-col footer-col-sections">
-            <h3 className="footer-col-title">Other Sections</h3>
+            <h3 className="footer-col-title">{t('footer.otherSections')}</h3>
             <ul className="footer-links-list">
-              <li><a href="#about-us">About Us</a></li>
-              <li><a href="#careers">Careers</a></li>
-              <li><a href="#privacy-policy">Privacy Policy</a></li>
-              <li><a href="#terms-and-conditions">Terms & Conditions</a></li>
+              <li><a href="#about-us">{t('footer.aboutUs')}</a></li>
+              <li><a href="#careers">{t('footer.careers')}</a></li>
+              <li><a href="#privacy-policy">{t('footer.privacyPolicy')}</a></li>
+              <li><a href="#terms-and-conditions">{t('footer.terms')}</a></li>
             </ul>
           </div>
 
           {/* Company links (heading hidden, kept for column alignment) */}
           <div className="footer-col footer-col-company">
-            <h3 className="footer-col-title footer-col-title-hidden">Company</h3>
+            <h3 className="footer-col-title footer-col-title-hidden">{t('footer.company')}</h3>
             <ul className="footer-links-list">
-              <li><a href="#contact-us">Contact Us</a></li>
-              <li><a href="#advertise">Advertise With Us</a></li>
-              <li><a href="#meet-our-team">Meet Our Team</a></li>
-              <li><a href="#disclaimer">Disclaimer</a></li>
+              <li><a href="#contact-us">{t('footer.contactUs')}</a></li>
+              <li><a href="#advertise">{t('footer.advertise')}</a></li>
+              <li><a href="#meet-our-team">{t('footer.meetTeam')}</a></li>
+              <li><a href="#disclaimer">{t('footer.disclaimer')}</a></li>
             </ul>
           </div>
         </div>
@@ -128,11 +130,11 @@ export default function Footer({ categories = [] }) {
       <div className="footer-bottom-strip">
         <div className="container">
           <div className="footer-bottom-row">
-            <span>&copy; {new Date().getFullYear()} The One Journal. All rights reserved.</span>
+            <span>&copy; {new Date().getFullYear()} The One Journal. {t('footer.rights')}</span>
             <div style={{display: 'flex', gap: '1rem'}}>
-              <a href="#">Back to Top</a>
+              <a href="#">{t('footer.backToTop')}</a>
               <span>&bull;</span>
-              <a href="#">Site Map</a>
+              <a href="#">{t('footer.siteMap')}</a>
             </div>
           </div>
         </div>

@@ -12,6 +12,8 @@ import MediaSection from './components/MediaSection';
 import ArticlePage from './pages/ArticlePage';
 import CustomCursor from './components/CustomCursor';
 import Layout from './components/Layout';
+import { useI18n } from './i18n/I18nContext';
+import { resolveLocale } from './i18n/translations';
 
 // Pages
 import AboutUs from './pages/AboutUs';
@@ -36,6 +38,7 @@ import Jobs from './pages/Jobs';
 let siteViewCounted = false;
 
 export default function App() {
+  const { t, localized, setLocale } = useI18n();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedArticle, setSelectedArticle] = useState(null);
   const [darkMode, setDarkMode] = useState(() => {
@@ -91,8 +94,17 @@ export default function App() {
   };
 
   const handleLanguageChange = (value) => {
-    setSelectedLanguageId(value);
-    localStorage.setItem('selectedLanguageId', String(value));
+    const normalized = value === 'all' ? 'all' : Number(value);
+    setSelectedLanguageId(normalized);
+    localStorage.setItem('selectedLanguageId', String(normalized));
+    // Selecting a language pill also switches the UI locale. "All" reverts to
+    // English so the chrome stays readable when no language filter is active.
+    if (normalized === 'all') {
+      setLocale('en');
+    } else {
+      const lang = languages.find((l) => Number(l.id) === Number(normalized));
+      if (lang) setLocale(resolveLocale(lang));
+    }
   };
 
   const fetchBreakingNews = async () => {
@@ -253,6 +265,15 @@ export default function App() {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
+  // Once the languages list arrives, restore the UI locale to match the
+  // previously selected article-language filter so the chrome stays consistent
+  // across reloads. Skipped when "all" is selected (UI defaults to English).
+  useEffect(() => {
+    if (!languages.length || selectedLanguageId === 'all') return;
+    const lang = languages.find((l) => Number(l.id) === Number(selectedLanguageId));
+    if (lang) setLocale(resolveLocale(lang));
+  }, [languages, selectedLanguageId, setLocale]);
+
   // Handle scrolling when hash changes
   useEffect(() => {
     const pageRoutes = [
@@ -281,9 +302,11 @@ export default function App() {
   }, [currentHash]);
 
   // Apply the language filter (if any) to every article bucket before we
-  // derive section lists. "all" keeps everything.
+  // derive section lists. "all" keeps everything. Coerce both sides to
+  // Number because shared-hosting PDO often returns IDs as strings, which
+  // would break a strict === comparison ("1" === 1 is false).
   const matchesLanguage = (a) =>
-    selectedLanguageId === 'all' || a.languageId === selectedLanguageId;
+    selectedLanguageId === 'all' || Number(a.languageId) === Number(selectedLanguageId);
 
   const filteredArticles = articles
     ? Object.fromEntries(
@@ -509,28 +532,11 @@ export default function App() {
 
             {/* Language filter (only shown if admin has defined languages) */}
             {languages.length > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', margin: '0.5rem 0 1rem' }}>
-                <span style={{ fontSize: '0.78rem', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-                  Language:
-                </span>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-                  <button
-                    onClick={() => handleLanguageChange('all')}
-                    className="lang-filter-pill"
-                    style={{
-                      padding: '0.35rem 0.85rem',
-                      borderRadius: '999px',
-                      border: '1px solid var(--border-color)',
-                      background: selectedLanguageId === 'all' ? 'var(--accent-gold)' : 'var(--bg-secondary)',
-                      color: selectedLanguageId === 'all' ? '#fff' : 'var(--text-primary)',
-                      fontSize: '0.78rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      transition: 'all var(--transition-fast)'
-                    }}
-                  >
-                    All
-                  </button>
+              <div className="language-filter-bar" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '0.6rem', margin: '0.5rem 0 1rem' }}>
+                <h2 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, letterSpacing: '0.04em', color: 'var(--text-primary)' }}>
+                  {t('home.language')}
+                </h2>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', justifyContent: 'center' }}>
                   {languages.map((l) => (
                     <button
                       key={l.id}
@@ -540,8 +546,8 @@ export default function App() {
                         padding: '0.35rem 0.85rem',
                         borderRadius: '999px',
                         border: '1px solid var(--border-color)',
-                        background: selectedLanguageId === l.id ? 'var(--accent-gold)' : 'var(--bg-secondary)',
-                        color: selectedLanguageId === l.id ? '#fff' : 'var(--text-primary)',
+                        background: Number(selectedLanguageId) === Number(l.id) ? 'var(--accent-gold)' : 'var(--bg-secondary)',
+                        color: Number(selectedLanguageId) === Number(l.id) ? '#fff' : 'var(--text-primary)',
                         fontSize: '0.78rem',
                         fontWeight: 600,
                         cursor: 'pointer',
@@ -559,7 +565,7 @@ export default function App() {
             <div id="section-you-may-like" className="you-may-like-live-split">
               {/* Left Column: You May Like (2/3 width) */}
               <div className="you-may-like-column">
-                <SectionHeader title="Trending" id="you-may-like" viewAllLink="#category-uae" />
+                <SectionHeader title={t('home.trending')} id="you-may-like" viewAllLink="#category-uae" />
                 <div className="you-may-like-grid-3">
                   {getYouMayLikeArticles().map((art) => (
                     <ArticleCard key={art.id} article={art} onClick={handleArticleClick} />
@@ -571,10 +577,10 @@ export default function App() {
               <div className="live-feature-column">
                 <div className="live-feature-card">
                   <div className="live-feature-header">
-                    <span className="live-feature-title">Live Updates</span>
+                    <span className="live-feature-title">{t('home.liveUpdates')}</span>
                     <div className="live-badge">
                       <span className="live-dot"></span>
-                      Live
+                      {t('home.live')}
                     </div>
                   </div>
                   {liveUpdates === null ? (
@@ -630,7 +636,7 @@ export default function App() {
                     </>
                   ) : (
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center', padding: '2rem 0' }}>
-                      No live updates at this moment.
+                      {t('home.noLiveUpdates')}
                     </div>
                   )}
 
@@ -648,10 +654,10 @@ export default function App() {
               if (cat.slug === 'partner-content') {
                 return (
                   <section className="home-section" id={`section-${cat.slug}`} key={cat.id}>
-                    <SectionHeader title={cat.name} id={cat.slug} viewAllLink={`#category-${cat.slug}`} />
+                    <SectionHeader title={localized(cat)} id={cat.slug} viewAllLink={`#category-${cat.slug}`} />
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem' }}>
                       {list.map((art) => (
-                        <ArticleCard key={art.id} article={{ ...art, tag: art.tag || 'SPONSORED' }} onClick={handleArticleClick} />
+                        <ArticleCard key={art.id} article={{ ...art, tag: art.tag || t('home.sponsored').toUpperCase() }} onClick={handleArticleClick} />
                       ))}
                     </div>
                   </section>
@@ -662,7 +668,7 @@ export default function App() {
               if (cat.slug === 'videos-podcasts') {
                 return (
                   <section className="home-section" id={`section-${cat.slug}`} key={cat.id}>
-                    <SectionHeader title={cat.name} id={cat.slug} viewAllLink={`#category-${cat.slug}`} />
+                    <SectionHeader title={localized(cat)} id={cat.slug} viewAllLink={`#category-${cat.slug}`} />
                     <MediaSection articles={list} onArticleClick={handleArticleClick} />
                   </section>
                 );
@@ -672,7 +678,7 @@ export default function App() {
               const { featured, gridItems } = getStorySplit(list);
               return (
                 <section className="home-section" id={`section-${cat.slug}`} key={cat.id}>
-                  <SectionHeader title={cat.name} id={cat.slug} viewAllLink={`#category-${cat.slug}`} />
+                  <SectionHeader title={localized(cat)} id={cat.slug} viewAllLink={`#category-${cat.slug}`} />
                   <div className="grid-5-stories">
                     <div className="featured-column">
                       <FeaturedCard article={featured} onClick={handleArticleClick} />

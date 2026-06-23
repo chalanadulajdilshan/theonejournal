@@ -44,6 +44,16 @@
   margin: 0;
 }
 
+/* Meta description shown as a regular-weight summary paragraph under the
+   small bold intro. Used for SEO too, but rendered visibly here. */
+.article-page-summary {
+  font-size: 1rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
+  font-weight: 400;
+  margin: 0 0 1.25rem;
+}
+
 .article-page-meta {
   display: flex;
   align-items: center;
@@ -2584,9 +2594,13 @@ body.dark-mode .navbar-wrapper {
   font-weight: var(--font-weight-subheading) !important;
 }
 
-.modal-article-text p:first-of-type {
-  font-size: 1.15rem;
-  font-weight: 600;
+/* Default paragraph rhythm for the article body. We deliberately do NOT
+   use !important here so inline font-size / colour written by the editor
+   (TinyMCE font-size dropdown, colour picker, highlight) flows through
+   to the rendered article. */
+.modal-article-text p,
+.modal-article-text li {
+  font-size: 1.05rem;
   color: var(--text-primary);
 }
 
@@ -3388,9 +3402,12 @@ body.dark-mode .partner-content-banner {
 }
 /* Defeat inline `font-family` left behind by Word/Google-Docs paste
    (MsoNormal spans etc.) so pasted text inherits the site's typography.
-   We deliberately keep inline font-size/line-height so the editor's font-size
-   dropdown (12pt, 24pt, etc.) actually drives the rendered size. */
-.rich-content span[style] {
+   We deliberately keep inline font-size / colour / background-color so
+   the editor's font-size dropdown, text colour and highlight pickers
+   actually drive the rendered output on the article page. */
+.rich-content span[style],
+.rich-content p[style],
+.rich-content li[style] {
   font-family: inherit !important;
 }
 /* H1 + H2 are "headings" → Merriweather (serif).
@@ -3458,4 +3475,54 @@ body.dark-mode .partner-content-banner {
   max-width: 100%;
   height: auto;
   border-radius: 4px;
+}
+
+/* ==========================================
+   SCROLL UP / DOWN FLOATING BUTTONS
+   Sit at the top-right and bottom-right of the viewport like scrollbar
+   arrows. Up hides at the top of the page, down hides at the bottom.
+   Both ease the page slowly into place when clicked.
+   ========================================== */
+.scroll-fab {
+  position: fixed;
+  right: 1.25rem;
+  z-index: 999;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  border: 1px solid var(--border-color);
+  background: var(--accent-gold);
+  color: #111;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease, background-color 0.2s ease;
+}
+.scroll-fab--top    { top: 1.25rem; }
+.scroll-fab--bottom { bottom: 1.25rem; }
+.scroll-fab.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+.scroll-fab:hover {
+  filter: brightness(1.05);
+}
+.scroll-fab:focus-visible {
+  outline: 2px solid var(--accent-gold);
+  outline-offset: 3px;
+}
+@media (max-width: 600px) {
+  .scroll-fab {
+    right: 0.9rem;
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+  .scroll-fab--top    { top: 0.9rem; }
+  .scroll-fab--bottom { bottom: 0.9rem; }
 }

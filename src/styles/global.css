@@ -77,10 +77,16 @@ img {
   display: block;
 }
 
-/* Custom Scrollbar */
+/* Custom Scrollbar — visible, gold-accented so readers can see where
+   they are on the page. Firefox uses scrollbar-width/color; Chromium /
+   Safari use the ::-webkit-scrollbar pseudo-elements. */
+html {
+  scrollbar-width: auto;
+  scrollbar-color: var(--accent-gold) var(--bg-secondary);
+}
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 12px;
+  height: 12px;
 }
 
 ::-webkit-scrollbar-track {
@@ -88,8 +94,9 @@ img {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--text-muted);
-  border-radius: 4px;
+  background: var(--accent-gold);
+  border: 2px solid var(--bg-secondary);
+  border-radius: 6px;
 }
 
 ::-webkit-scrollbar-thumb:hover {

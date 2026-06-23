@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { useI18n } from '../i18n/I18nContext';
 
 export default function NewsTicker({ tickerItems, onArticleClick }) {
+  const { t } = useI18n();
   const [activeIdx, setActiveIdx] = useState(null);
   // If no items, show default placeholder breaking news
   const items = tickerItems && tickerItems.length > 0 ? tickerItems : [
@@ -13,7 +15,7 @@ export default function NewsTicker({ tickerItems, onArticleClick }) {
   return (
     <div className="ticker-wrapper">
       <div className="ticker-label">
-        Breaking News
+        {t('ticker.breakingNews')}
       </div>
       <div className="ticker-content-flow">
         <div className="ticker-track">

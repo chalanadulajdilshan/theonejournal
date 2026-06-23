@@ -1,28 +1,31 @@
 import React, { useState } from 'react';
-
-// The "Advertise With Us" menu links to dedicated marketing pages (not article
-// categories), so it stays static and is appended after the dynamic categories.
-const ADVERTISE_ITEM = {
-  name: 'Advertise With Us',
-  hash: '#advertise',
-  advertise: true,
-  subcategories: [
-    { name: 'Partner Content', hash: '#partner-content' },
-    { name: 'Display Banner Ads', hash: '#display-banner' },
-    { name: 'Social Media Promotion', hash: '#social-media' },
-    { name: 'Add-On Service', hash: '#add-on-service' },
-    { name: 'Rates & Pricing', hash: '#rates-pricing' },
-  ],
-};
-
-const JOBS_ITEM = {
-  name: 'Foreign Jobs',
-  hash: '#jobs',
-  jobs: true,
-  subcategories: [],
-};
+import { useI18n } from '../i18n/I18nContext';
 
 export default function MainNavbar({ onSearchChange, searchVal, categories: backendCategories, activeCategory }) {
+  const { t, localized } = useI18n();
+
+  // The "Advertise With Us" menu links to dedicated marketing pages (not
+  // article categories), so it stays static and is appended after the dynamic
+  // categories. Built inside the component so labels react to locale changes.
+  const ADVERTISE_ITEM = {
+    name: t('nav.advertise'),
+    hash: '#advertise',
+    advertise: true,
+    subcategories: [
+      { name: t('nav.partnerContent'), hash: '#partner-content' },
+      { name: t('nav.displayBanner'), hash: '#display-banner' },
+      { name: t('nav.socialMedia'), hash: '#social-media' },
+      { name: t('nav.addOnService'), hash: '#add-on-service' },
+      { name: t('nav.ratesPricing'), hash: '#rates-pricing' },
+    ],
+  };
+
+  const JOBS_ITEM = {
+    name: t('nav.foreignJobs'),
+    hash: '#jobs',
+    jobs: true,
+    subcategories: [],
+  };
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [activeMobileSub, setActiveMobileSub] = useState(null);
@@ -31,11 +34,11 @@ export default function MainNavbar({ onSearchChange, searchVal, categories: back
   // then append the static "Advertise With Us" marketing menu.
   const categories = [
     ...(backendCategories || []).map((cat) => ({
-      name: cat.name,
+      name: localized(cat),
       // Top-level item opens the full category page (all its news)
       hash: `#category-${cat.slug}`,
       subcategories: (cat.subcategories || []).map((sub) => ({
-        name: sub.name,
+        name: localized(sub),
         // Sub-tag link filters the category page to just this sub-tag
         hash: `#category-${cat.slug}--${sub.slug}`,
       })),
@@ -162,20 +165,20 @@ export default function MainNavbar({ onSearchChange, searchVal, categories: back
         <div className="search-overlay-bar">
           <div className="container">
             <form onSubmit={handleSearchSubmit} className="search-form-container">
-              <input 
-                type="text" 
-                placeholder="Search breaking news, lifestyle stories, or partner content..." 
+              <input
+                type="text"
+                placeholder={t('nav.searchPlaceholder')}
                 className="search-input-field"
                 value={searchVal}
                 onChange={(e) => onSearchChange(e.target.value)}
                 autoFocus
               />
-              <button 
-                type="button" 
-                onClick={() => { onSearchChange(''); toggleSearch(); }} 
+              <button
+                type="button"
+                onClick={() => { onSearchChange(''); toggleSearch(); }}
                 className="search-close-btn"
               >
-                Clear & Close
+                {t('nav.clearClose')}
               </button>
             </form>
           </div>

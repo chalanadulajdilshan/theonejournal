@@ -3,6 +3,7 @@ import TopHeader from './TopHeader';
 import MainNavbar from './MainNavbar';
 import NewsTicker from './NewsTicker';
 import Footer from './Footer';
+import BackToTop from './BackToTop';
 
 /**
  * Layout Component
@@ -46,6 +47,9 @@ export default function Layout({
 
       {/* 5. Footer */}
       <Footer categories={categories} />
+
+      {/* Floating scroll-to-top button — shown on every page */}
+      <BackToTop />
     </div>
   );
 }

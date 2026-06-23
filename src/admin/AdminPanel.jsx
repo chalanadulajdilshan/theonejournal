@@ -136,6 +136,67 @@ function AutoGrowTextarea({ value, singleLine = false, onKeyDown, ...props }) {
   );
 }
 
+// Inline editor used by the Categories tab so an admin can supply a translated
+// name per language for a category or sub-tag. The translation key is the
+// language `code` (e.g. "ar", "si"), so any language added in the Languages
+// tab can be translated here without code changes.
+function TranslationsEditor({ label, languages, draft, setDraft, onSave, onCancel, saving }) {
+  return (
+    <div
+      style={{
+        marginTop: '0.5rem',
+        padding: '0.85rem 1rem',
+        border: '1px dashed var(--accent-gold)',
+        borderRadius: '6px',
+        backgroundColor: 'rgba(197, 160, 89, 0.06)',
+      }}
+    >
+      <div style={{ fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
+        {label}
+      </div>
+      {(!languages || languages.length === 0) ? (
+        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+          Add languages in the Languages tab first. Each language needs a code (e.g. en, ar, si, ta) so its translation can be stored.
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.5rem' }}>
+          {languages.map((lang) => {
+            const code = (lang.code || '').toLowerCase().trim();
+            if (!code) {
+              return (
+                <div key={lang.id} style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  {lang.name}: <em>missing code, edit the language to add one</em>
+                </div>
+              );
+            }
+            return (
+              <label key={lang.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', fontSize: '0.75rem' }}>
+                <span style={{ color: 'var(--text-muted)' }}>{lang.name} <code>({code})</code></span>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={draft[code] || ''}
+                  onChange={(e) => setDraft((d) => ({ ...d, [code]: e.target.value }))}
+                  placeholder={`Translation for ${lang.name}`}
+                  style={{ padding: '0.25rem 0.5rem', fontSize: '0.85rem' }}
+                />
+              </label>
+            );
+          })}
+        </div>
+      )}
+      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', justifyContent: 'flex-end' }}>
+        <button type="button" className="btn-secondary" onClick={onCancel} disabled={saving} style={{ padding: '0.35rem 0.85rem', fontSize: '0.8rem' }}>
+          Cancel
+        </button>
+        <button type="button" className="btn-primary" onClick={onSave} disabled={saving} style={{ padding: '0.35rem 0.85rem', fontSize: '0.8rem', width: 'auto' }}>
+          {saving ? 'Saving…' : 'Save translations'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminPanel({ articles, onRefreshArticles, breakingNews, onRefreshBreaking, darkMode, toggleDarkMode }) {
   // Auth state — the admin panel ALWAYS starts logged out. Every visit (a fresh
   // page load, returning from the website, or after logging out) requires
@@ -204,6 +265,11 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
   const [editingCatName, setEditingCatName] = useState('');
   const [editingSubcatId, setEditingSubcatId] = useState(null);
   const [editingSubcatName, setEditingSubcatName] = useState('');
+  // Inline category/sub-tag translation editor — `{ type: 'cat' | 'sub', id }`
+  const [translatingTarget, setTranslatingTarget] = useState(null);
+  // Edited but not yet saved translation values, keyed by language code.
+  const [translationDraft, setTranslationDraft] = useState({});
+  const [savingTranslations, setSavingTranslations] = useState(false);
 
   // Breaking News Manager state
   const [newBreakingTitle, setNewBreakingTitle] = useState('');
@@ -1037,6 +1103,50 @@ By using The One Journal, you acknowledge that you have read and agreed to these
       }
     } catch (err) {
       addToast('Request failed.', 'error');
+    }
+  };
+
+  // Open the inline translation editor for a category or sub-tag and seed the
+  // draft state with whatever translations the row already has.
+  const openTranslations = (type, entity) => {
+    setTranslatingTarget({ type, id: entity.id });
+    setTranslationDraft({ ...(entity.translations || {}) });
+  };
+
+  const closeTranslations = () => {
+    setTranslatingTarget(null);
+    setTranslationDraft({});
+  };
+
+  const handleSaveTranslations = async () => {
+    if (!translatingTarget) return;
+    setSavingTranslations(true);
+    try {
+      const action =
+        translatingTarget.type === 'cat'
+          ? 'set_category_translations'
+          : 'set_subcategory_translations';
+      const res = await fetch('/api/manage_categories.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action,
+          id: translatingTarget.id,
+          translations: translationDraft,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        addToast('Translations saved.', 'success');
+        closeTranslations();
+        await fetchCategories();
+      } else {
+        addToast(data.error || 'Failed to save translations.', 'error');
+      }
+    } catch (err) {
+      addToast('Request failed.', 'error');
+    } finally {
+      setSavingTranslations(false);
     }
   };
 
@@ -2389,8 +2499,8 @@ By using The One Journal, you acknowledge that you have read and agreed to these
               {/* Category Lists */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 {categoriesList.map((cat, catIdx) => (
+                  <React.Fragment key={cat.id}>
                   <div
-                    key={cat.id}
                     onClick={() => setSelectedManagerCat(cat)}
                     draggable={editingCatId !== cat.id}
                     onDragStart={() => setDragCatIndex(catIdx)}
@@ -2451,8 +2561,17 @@ By using The One Journal, you acknowledge that you have read and agreed to these
                             }}
                             className="btn-action-edit"
                             style={{ padding: '0.25rem 0.5rem' }}
+                            title="Rename"
                           >
                             ✏️
+                          </button>
+                          <button
+                            onClick={() => openTranslations('cat', cat)}
+                            className="btn-action-edit"
+                            style={{ padding: '0.25rem 0.5rem' }}
+                            title="Edit translations"
+                          >
+                            🌐
                           </button>
                           <button
                             onClick={() => handleDeleteCategory(cat.id)}
@@ -2465,6 +2584,18 @@ By using The One Journal, you acknowledge that you have read and agreed to these
                       </>
                     )}
                   </div>
+                  {translatingTarget?.type === 'cat' && translatingTarget.id === cat.id && (
+                    <TranslationsEditor
+                      label={`Translations for "${cat.name}"`}
+                      languages={languages}
+                      draft={translationDraft}
+                      setDraft={setTranslationDraft}
+                      onSave={handleSaveTranslations}
+                      onCancel={closeTranslations}
+                      saving={savingTranslations}
+                    />
+                  )}
+                  </React.Fragment>
                 ))}
               </div>
             </div>
@@ -2498,8 +2629,8 @@ By using The One Journal, you acknowledge that you have read and agreed to these
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem' }}>
                     {selectedManagerCat.subcategories && selectedManagerCat.subcategories.length > 0 ? (
                       selectedManagerCat.subcategories.map((sub) => (
+                        <React.Fragment key={sub.id}>
                         <div
-                          key={sub.id}
                           style={{
                             display: 'flex',
                             alignItems: 'center',
@@ -2536,8 +2667,17 @@ By using The One Journal, you acknowledge that you have read and agreed to these
                                   }}
                                   className="btn-action-edit"
                                   style={{ padding: '0.15rem 0.35rem', fontSize: '0.75rem' }}
+                                  title="Rename"
                                 >
                                   ✏️
+                                </button>
+                                <button
+                                  onClick={() => openTranslations('sub', sub)}
+                                  className="btn-action-edit"
+                                  style={{ padding: '0.15rem 0.35rem', fontSize: '0.75rem' }}
+                                  title="Edit translations"
+                                >
+                                  🌐
                                 </button>
                                 <button
                                   onClick={() => handleDeleteSubcategory(sub.id)}
@@ -2550,6 +2690,20 @@ By using The One Journal, you acknowledge that you have read and agreed to these
                             </>
                           )}
                         </div>
+                        {translatingTarget?.type === 'sub' && translatingTarget.id === sub.id && (
+                          <div style={{ gridColumn: '1 / -1' }}>
+                            <TranslationsEditor
+                              label={`Translations for "${sub.name}"`}
+                              languages={languages}
+                              draft={translationDraft}
+                              setDraft={setTranslationDraft}
+                              onSave={handleSaveTranslations}
+                              onCancel={closeTranslations}
+                              saving={savingTranslations}
+                            />
+                          </div>
+                        )}
+                        </React.Fragment>
                       ))
                     ) : (
                       <div style={{ gridColumn: '1 / -1', color: 'var(--text-muted)', textAlign: 'center', padding: '2rem' }}>
