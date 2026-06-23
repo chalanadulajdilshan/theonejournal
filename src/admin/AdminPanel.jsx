@@ -2171,24 +2171,6 @@ By using The One Journal, you acknowledge that you have read and agreed to these
             Countries
           </button>
           <button
-            onClick={() => { setActiveTab('languages'); fetchLanguages(); }}
-            className={`semibold`}
-            style={{
-              background: 'none',
-              border: 'none',
-              borderBottom: activeTab === 'languages' ? '3px solid var(--accent-gold)' : '3px solid transparent',
-              color: activeTab === 'languages' ? 'var(--text-primary)' : 'var(--text-muted)',
-              padding: '0.75rem 1.5rem',
-              cursor: 'pointer',
-              fontSize: '0.95rem',
-              outline: 'none',
-              transition: 'all var(--transition-fast)',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            Languages
-          </button>
-          <button
             onClick={() => { setActiveTab('liveupdates'); fetchLiveUpdates(); }}
             className={`semibold`}
             style={{
