@@ -13,10 +13,14 @@ function mapRowToArticle($row) {
         'excerpt' => $row['excerpt'],
         'content' => $row['content'],
         'image' => $row['image'],
+        'imageCredit' => $row['image_credit'] ?? null,
         'category' => $row['category_name'],
         'categoryId' => intval($row['category_id']),
         'tag' => $row['subcategory_name'],
         'subcategoryId' => intval($row['subcategory_id']),
+        'languageId' => isset($row['language_id']) && $row['language_id'] !== null ? intval($row['language_id']) : null,
+        'language' => $row['language_name'] ?? null,
+        'languageCode' => $row['language_code'] ?? null,
         'author' => $row['author'],
         'date' => $row['date'],
         'readTime' => $row['read_time'],
@@ -46,15 +50,32 @@ function mapRowToArticle($row) {
 }
 
 try {
-    // 1. Fetch all articles joined with category and subcategory tables for regular sections
+    // Auto-add language_id column once (safe no-op if present)
+    try {
+        $hasLang = $pdo->query("SHOW COLUMNS FROM articles LIKE 'language_id'")->fetch();
+        if (!$hasLang) {
+            $pdo->exec("ALTER TABLE articles ADD COLUMN language_id INT NULL AFTER subcategory_id");
+        }
+    } catch (\PDOException $e) { /* ignore */ }
+    try {
+        $hasImgCredit = $pdo->query("SHOW COLUMNS FROM articles LIKE 'image_credit'")->fetch();
+        if (!$hasImgCredit) {
+            $pdo->exec("ALTER TABLE articles ADD COLUMN image_credit VARCHAR(255) NULL AFTER image");
+        }
+    } catch (\PDOException $e) { /* ignore */ }
+
+    // 1. Fetch all articles joined with category, subcategory, and language tables
     $stmt = $pdo->query("
         SELECT
             a.*,
             COALESCE(c.name, 'Uncategorized') AS category_name,
-            COALESCE(s.name, 'General') AS subcategory_name
+            COALESCE(s.name, 'General') AS subcategory_name,
+            l.name AS language_name,
+            l.code AS language_code
         FROM articles a
         LEFT JOIN categories c ON a.category_id = c.id
         LEFT JOIN subcategories s ON a.subcategory_id = s.id
+        LEFT JOIN languages l ON a.language_id = l.id
         ORDER BY a.sort_order ASC, a.id DESC
     ");
     $dbArticles = $stmt->fetchAll();
@@ -114,10 +135,13 @@ try {
         SELECT
             a.*,
             COALESCE(c.name, 'Uncategorized') AS category_name,
-            COALESCE(s.name, 'General') AS subcategory_name
+            COALESCE(s.name, 'General') AS subcategory_name,
+            l.name AS language_name,
+            l.code AS language_code
         FROM articles a
         LEFT JOIN categories c ON a.category_id = c.id
         LEFT JOIN subcategories s ON a.subcategory_id = s.id
+        LEFT JOIN languages l ON a.language_id = l.id
         WHERE a.views_count > 0
         ORDER BY a.views_count DESC, a.last_clicked_at DESC
         LIMIT 5

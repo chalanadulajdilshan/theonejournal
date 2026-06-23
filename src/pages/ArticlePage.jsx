@@ -98,13 +98,28 @@ export default function ArticlePage({ layoutProps, article }) {
     );
   }
 
-  const bodyContent = article.content || article.excerpt || '';
+  const bodyContent = article.content || '';
   const ytId = getYouTubeId(article.mediaUrl);
-  const metaDeck = (article.metaDescription || '').trim();
+  const intro = (article.excerpt || '').trim();
+  const imageCredit = (article.imageCredit || '').trim();
   const tagList = (article.seoTags || '')
     .split(',')
     .map((t) => t.trim())
     .filter(Boolean);
+
+  const mediaBlock = ytId ? (
+    <div className="article-page-media">
+      <iframe
+        src={`https://www.youtube.com/embed/${ytId}`}
+        title={article.title}
+        frameBorder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allowFullScreen
+      ></iframe>
+    </div>
+  ) : article.image ? (
+    <img src={article.image} alt={article.title} className="article-page-img" />
+  ) : null;
 
   return (
     <Layout {...layoutProps}>
@@ -112,7 +127,16 @@ export default function ArticlePage({ layoutProps, article }) {
         <span className="modal-tag">{article.tag || article.category}</span>
         <h1 className="article-page-title">{article.title}</h1>
 
-        {metaDeck && <p className="article-page-deck">{metaDeck}</p>}
+        {mediaBlock && (
+          <figure className="article-page-figure">
+            {mediaBlock}
+            {imageCredit && (
+              <figcaption className="article-page-credit">Photo: {imageCredit}</figcaption>
+            )}
+          </figure>
+        )}
+
+        {intro && <p className="article-page-deck">{intro}</p>}
 
         <div className="article-page-meta" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
           <span className="modal-author-avatar">{(article.author || 'T').charAt(0)}</span>
@@ -239,20 +263,6 @@ export default function ArticlePage({ layoutProps, article }) {
             })()}
           </div>
         </div>
-
-        {ytId ? (
-          <div className="article-page-media">
-            <iframe
-              src={`https://www.youtube.com/embed/${ytId}`}
-              title={article.title}
-              frameBorder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowFullScreen
-            ></iframe>
-          </div>
-        ) : article.image ? (
-          <img src={article.image} alt={article.title} className="article-page-img" />
-        ) : null}
 
         <RichContent content={bodyContent} className="modal-article-text" />
 

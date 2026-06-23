@@ -23,8 +23,14 @@ $title = trim($input['title'] ?? '');
 $excerpt = trim($input['excerpt'] ?? '');
 $content = trim($input['content'] ?? '');
 $image = trim($input['image'] ?? '');
+$imageCredit = array_key_exists('imageCredit', $input)
+    ? (empty($input['imageCredit']) ? null : trim($input['imageCredit']))
+    : false; // false = "not provided, leave existing"
 $categoryId = intval($input['categoryId'] ?? 0);
 $subcategoryId = intval($input['subcategoryId'] ?? 0);
+$languageId = array_key_exists('languageId', $input)
+    ? (empty($input['languageId']) ? null : intval($input['languageId']))
+    : false; // false = "not provided, leave existing"
 $author = trim($input['author'] ?? '');
 $date = trim($input['date'] ?? '');
 $readTime = trim($input['readTime'] ?? '');
@@ -66,32 +72,50 @@ try {
         $date = $stmtDate->fetchColumn();
     }
 
-    $stmtUpdate = $pdo->prepare("UPDATE articles SET 
-        title = ?, 
-        excerpt = ?, 
-        content = ?, 
-        image = ?, 
-        category_id = ?, 
-        subcategory_id = ?, 
-        author = ?, 
-        date = ?, 
-        read_time = ?, 
-        is_sponsored = ?, 
+    // Auto-add language_id column on first run after deploy
+    $hasLang = $pdo->query("SHOW COLUMNS FROM articles LIKE 'language_id'")->fetch();
+    if (!$hasLang) {
+        $pdo->exec("ALTER TABLE articles ADD COLUMN language_id INT NULL AFTER subcategory_id");
+    }
+    // Auto-add image_credit column on first run after deploy
+    $hasImgCredit = $pdo->query("SHOW COLUMNS FROM articles LIKE 'image_credit'")->fetch();
+    if (!$hasImgCredit) {
+        $pdo->exec("ALTER TABLE articles ADD COLUMN image_credit VARCHAR(255) NULL AFTER image");
+    }
+
+    $setLanguage = $languageId !== false;
+    $setImageCredit = $imageCredit !== false;
+    $sql = "UPDATE articles SET
+        title = ?,
+        excerpt = ?,
+        content = ?,
+        image = ?, "
+        . ($setImageCredit ? "image_credit = ?, " : "") .
+        "category_id = ?,
+        subcategory_id = ?, "
+        . ($setLanguage ? "language_id = ?, " : "") .
+        "author = ?,
+        date = ?,
+        read_time = ?,
+        is_sponsored = ?,
         media_type = ?,
         duration = ?,
         media_url = ?,
         seo_title = ?,
         meta_description = ?,
         seo_tags = ?
-        WHERE article_id = ?");
+        WHERE article_id = ?";
 
-    $stmtUpdate->execute([
+    $params = [
         $title,
         $excerpt,
         $content,
         $image,
-        $categoryId,
-        $subcategoryId,
+    ];
+    if ($setImageCredit) $params[] = $imageCredit;
+    array_push($params, $categoryId, $subcategoryId);
+    if ($setLanguage) $params[] = $languageId;
+    array_push($params,
         $author,
         $date,
         $readTime ?: '3 min read',
@@ -103,7 +127,10 @@ try {
         $metaDescription,
         $seoTags,
         $articleId
-    ]);
+    );
+
+    $stmtUpdate = $pdo->prepare($sql);
+    $stmtUpdate->execute($params);
 
     echo json_encode([
         'success' => true,
@@ -114,8 +141,10 @@ try {
             'excerpt' => $excerpt,
             'content' => $content,
             'image' => $image,
+            'imageCredit' => $imageCredit === false ? null : $imageCredit,
             'categoryId' => $categoryId,
             'subcategoryId' => $subcategoryId,
+            'languageId' => $languageId === false ? null : $languageId,
             'author' => $author,
             'date' => $date,
             'readTime' => $readTime ?: '3 min read',

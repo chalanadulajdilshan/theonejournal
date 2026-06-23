@@ -49,6 +49,11 @@ export default function App() {
   const [liveUpdates, setLiveUpdates] = useState(null);
   const [siteViews, setSiteViews] = useState(null);
   const [categories, setCategories] = useState([]);
+  const [languages, setLanguages] = useState([]);
+  const [selectedLanguageId, setSelectedLanguageId] = useState(() => {
+    const saved = localStorage.getItem('selectedLanguageId');
+    return saved && saved !== 'all' ? parseInt(saved) : 'all';
+  });
   // Remember which live updates have been opened so their titles show as "read"
   const [clickedLiveIds, setClickedLiveIds] = useState(() => {
     try { return new Set(JSON.parse(localStorage.getItem('clickedLiveIds') || '[]')); }
@@ -71,6 +76,23 @@ export default function App() {
     } catch (err) {
       console.error('Failed to fetch categories:', err);
     }
+  };
+
+  const fetchLanguages = async () => {
+    try {
+      const res = await fetch('/api/get_languages.php');
+      if (res.ok) {
+        const data = await res.json();
+        setLanguages(Array.isArray(data) ? data : []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch languages:', err);
+    }
+  };
+
+  const handleLanguageChange = (value) => {
+    setSelectedLanguageId(value);
+    localStorage.setItem('selectedLanguageId', String(value));
   };
 
   const fetchBreakingNews = async () => {
@@ -215,6 +237,7 @@ export default function App() {
     fetchBreakingNews();
     fetchLiveUpdates();
     fetchCategories();
+    fetchLanguages();
 
     // Count this visit only once per real page load (StrictMode-safe).
     if (!siteViewCounted) {
@@ -257,10 +280,24 @@ export default function App() {
     }
   }, [currentHash]);
 
+  // Apply the language filter (if any) to every article bucket before we
+  // derive section lists. "all" keeps everything.
+  const matchesLanguage = (a) =>
+    selectedLanguageId === 'all' || a.languageId === selectedLanguageId;
+
+  const filteredArticles = articles
+    ? Object.fromEntries(
+        Object.entries(articles).map(([k, list]) => [
+          k,
+          Array.isArray(list) ? list.filter(matchesLanguage) : list
+        ])
+      )
+    : null;
+
   // Deduplicated flat list of every article across all category groups
   // (includes any newly-added admin categories, e.g. "cars")
-  const flatArticles = articles
-    ? Object.values(articles).flat().filter((a, i, arr) => arr.findIndex(x => x.id === a.id) === i)
+  const flatArticles = filteredArticles
+    ? Object.values(filteredArticles).flat().filter((a, i, arr) => arr.findIndex(x => x.id === a.id) === i)
     : [];
 
   // Filtering articles based on query
@@ -283,13 +320,13 @@ export default function App() {
 
   // Helper to get exactly 3 articles for the "You May Like" grid
   const getYouMayLikeArticles = () => {
-    if (!articles) return [];
-    const dynamicList = articles.youMayLike || [];
+    if (!filteredArticles) return [];
+    const dynamicList = filteredArticles.youMayLike || [];
     const fallbacks = [
-      ...(articles.world || []),
-      ...(articles.business || []),
-      ...(articles.tech || []),
-      ...(articles.life || [])
+      ...(filteredArticles.world || []),
+      ...(filteredArticles.business || []),
+      ...(filteredArticles.tech || []),
+      ...(filteredArticles.life || [])
     ];
     const result = [...dynamicList];
     for (const art of fallbacks) {
@@ -374,11 +411,16 @@ export default function App() {
   }
 
   // Full article page: clicking any news opens it as its own page.
+  // Use the *unfiltered* pool so a direct article URL works even when the
+  // home page is filtered to a different language.
   if (currentHash.startsWith('#article')) {
     let art = selectedArticle;
     if (!art && currentHash.startsWith('#article-')) {
       const id = currentHash.replace('#article-', '');
-      art = flatArticles.find(a => String(a.id) === id);
+      const allArticles = articles
+        ? Object.values(articles).flat().filter((a, i, arr) => arr.findIndex(x => x.id === a.id) === i)
+        : [];
+      art = allArticles.find(a => String(a.id) === id);
     }
     return <ArticlePage layoutProps={{ ...layoutProps, activeCategory: art?.category }} article={art} />;
   }
@@ -464,7 +506,55 @@ export default function App() {
         ) : (
           /* Main Homepage Sections Layout */
           <div className="main-layout">
-            
+
+            {/* Language filter (only shown if admin has defined languages) */}
+            {languages.length > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', margin: '0.5rem 0 1rem' }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                  Language:
+                </span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                  <button
+                    onClick={() => handleLanguageChange('all')}
+                    className="lang-filter-pill"
+                    style={{
+                      padding: '0.35rem 0.85rem',
+                      borderRadius: '999px',
+                      border: '1px solid var(--border-color)',
+                      background: selectedLanguageId === 'all' ? 'var(--accent-gold)' : 'var(--bg-secondary)',
+                      color: selectedLanguageId === 'all' ? '#fff' : 'var(--text-primary)',
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      transition: 'all var(--transition-fast)'
+                    }}
+                  >
+                    All
+                  </button>
+                  {languages.map((l) => (
+                    <button
+                      key={l.id}
+                      onClick={() => handleLanguageChange(l.id)}
+                      className="lang-filter-pill"
+                      style={{
+                        padding: '0.35rem 0.85rem',
+                        borderRadius: '999px',
+                        border: '1px solid var(--border-color)',
+                        background: selectedLanguageId === l.id ? 'var(--accent-gold)' : 'var(--bg-secondary)',
+                        color: selectedLanguageId === l.id ? '#fff' : 'var(--text-primary)',
+                        fontSize: '0.78rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        transition: 'all var(--transition-fast)'
+                      }}
+                    >
+                      {l.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* 1. TOP SPLIT SECTION: You May Like & Live Feature Path */}
             <div id="section-you-may-like" className="you-may-like-live-split">
               {/* Left Column: You May Like (2/3 width) */}

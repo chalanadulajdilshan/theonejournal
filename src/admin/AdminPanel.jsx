@@ -180,9 +180,11 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
   const [content, setContent] = useState('');
   const [image, setImage] = useState('');
   const [category, setCategory] = useState('');
+  const [imageCredit, setImageCredit] = useState('');
   const [categoryId, setCategoryId] = useState(0);
   const [tag, setTag] = useState('');
   const [subcategoryId, setSubcategoryId] = useState(0);
+  const [languageId, setLanguageId] = useState('');
   const [author, setAuthor] = useState('');
   const [readTime, setReadTime] = useState('');
   const [isSponsored, setIsSponsored] = useState(false);
@@ -244,6 +246,15 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
   const [jobSaving, setJobSaving] = useState(false);
   const [jobDragIndex, setJobDragIndex] = useState(null);
   const [jobDragOverIndex, setJobDragOverIndex] = useState(null);
+
+  // Languages Manager state
+  const [languages, setLanguages] = useState([]);
+  const [languagesLoading, setLanguagesLoading] = useState(false);
+  const [editingLanguageId, setEditingLanguageId] = useState(null);
+  const [languageName, setLanguageName] = useState('');
+  const [languageCode, setLanguageCode] = useState('');
+  const [languageFormOpen, setLanguageFormOpen] = useState(false);
+  const [languageSaving, setLanguageSaving] = useState(false);
 
   // Countries Manager state
   const [countries, setCountries] = useState([]);
@@ -578,6 +589,7 @@ By using The One Journal, you acknowledge that you have read and agreed to these
         addToast(`Welcome back, ${data.username}!`, 'success');
         onRefreshArticles();
         await fetchCategories();
+        await fetchLanguages();
         await fetchHeaderRates();
       } else {
         setLoginError(data.error || 'Invalid credentials.');
@@ -639,6 +651,7 @@ By using The One Journal, you acknowledge that you have read and agreed to these
     setExcerpt('');
     setContent('');
     setImage('');
+    setImageCredit('');
 
     // Select first category on load (skip 'You May Like' — it's auto-populated by views)
     const selectableCats = categoriesList.filter(c => c.slug !== 'you-may-like');
@@ -669,6 +682,7 @@ By using The One Journal, you acknowledge that you have read and agreed to these
     setSeoTitle('');
     setMetaDescription('');
     setSeoTags('');
+    setLanguageId(languages.length > 0 ? String(languages[0].id) : '');
     setIsFormOpen(true);
   };
 
@@ -680,6 +694,7 @@ By using The One Journal, you acknowledge that you have read and agreed to these
     setExcerpt(art.excerpt);
     setContent(art.content);
     setImage(art.image);
+    setImageCredit(art.imageCredit || '');
     setCategoryId(art.categoryId || 0);
     setCategory(art.category);
     setSubcategoryId(art.subcategoryId || 0);
@@ -693,6 +708,7 @@ By using The One Journal, you acknowledge that you have read and agreed to these
     setSeoTitle(art.seoTitle || '');
     setMetaDescription(art.metaDescription || '');
     setSeoTags(art.seoTags || '');
+    setLanguageId(art.languageId ? String(art.languageId) : '');
     setIsFormOpen(true);
   };
 
@@ -725,6 +741,7 @@ By using The One Journal, you acknowledge that you have read and agreed to these
       excerpt,
       content,
       image,
+      imageCredit: imageCredit.trim() || null,
       categoryId,
       subcategoryId,
       author,
@@ -735,7 +752,8 @@ By using The One Journal, you acknowledge that you have read and agreed to these
       mediaUrl: category.toLowerCase() === 'videos & podcasts' ? mediaUrl : null,
       seoTitle,
       metaDescription,
-      seoTags
+      seoTags,
+      languageId: languageId ? parseInt(languageId) : null
     };
 
     if (formMode === 'edit') {
@@ -1502,6 +1520,92 @@ By using The One Journal, you acknowledge that you have read and agreed to these
     });
   };
 
+  // LANGUAGES MANAGER HANDLERS
+  const fetchLanguages = async () => {
+    setLanguagesLoading(true);
+    try {
+      const res = await fetch('/api/manage_languages.php');
+      const data = await res.json();
+      setLanguages(Array.isArray(data) ? data : []);
+    } catch {
+      addToast('Failed to load languages.', 'error');
+    } finally {
+      setLanguagesLoading(false);
+    }
+  };
+
+  const openAddLanguage = () => {
+    setEditingLanguageId(null);
+    setLanguageName('');
+    setLanguageCode('');
+    setLanguageFormOpen(true);
+  };
+
+  const openEditLanguage = (item) => {
+    setEditingLanguageId(item.id);
+    setLanguageName(item.name);
+    setLanguageCode(item.code || '');
+    setLanguageFormOpen(true);
+  };
+
+  const handleSaveLanguage = async (e) => {
+    e.preventDefault();
+    if (!languageName.trim()) return;
+    setLanguageSaving(true);
+    const action = editingLanguageId ? 'edit' : 'add';
+    const payload = { action, name: languageName.trim(), code: languageCode.trim() };
+    if (editingLanguageId) payload.id = editingLanguageId;
+    try {
+      const res = await fetch('/api/manage_languages.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        addToast(editingLanguageId ? 'Language saved.' : 'Language added.', 'success');
+        setLanguageFormOpen(false);
+        fetchLanguages();
+      } else {
+        addToast(data.error || 'Failed to save language.', 'error');
+      }
+    } catch {
+      addToast('Network connection failed.', 'error');
+    } finally {
+      setLanguageSaving(false);
+    }
+  };
+
+  const handleDeleteLanguage = (id) => {
+    Swal.fire({
+      title: 'Delete Language?',
+      text: 'Articles using this language will keep their content but lose the language tag.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, delete',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#dc3545'
+    }).then(async (r) => {
+      if (!r.isConfirmed) return;
+      try {
+        const res = await fetch('/api/manage_languages.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'delete', id })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          addToast('Language deleted.', 'success');
+          fetchLanguages();
+        } else {
+          addToast(data.error || 'Failed to delete.', 'error');
+        }
+      } catch {
+        addToast('Network connection failed.', 'error');
+      }
+    });
+  };
+
   // USERS MANAGER HANDLERS
   const fetchUsers = async () => {
     setUsersLoading(true);
@@ -2065,6 +2169,24 @@ By using The One Journal, you acknowledge that you have read and agreed to these
             }}
           >
             Countries
+          </button>
+          <button
+            onClick={() => { setActiveTab('languages'); fetchLanguages(); }}
+            className={`semibold`}
+            style={{
+              background: 'none',
+              border: 'none',
+              borderBottom: activeTab === 'languages' ? '3px solid var(--accent-gold)' : '3px solid transparent',
+              color: activeTab === 'languages' ? 'var(--text-primary)' : 'var(--text-muted)',
+              padding: '0.75rem 1.5rem',
+              cursor: 'pointer',
+              fontSize: '0.95rem',
+              outline: 'none',
+              transition: 'all var(--transition-fast)',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            Languages
           </button>
           <button
             onClick={() => { setActiveTab('liveupdates'); fetchLiveUpdates(); }}
@@ -3027,6 +3149,125 @@ By using The One Journal, you acknowledge that you have read and agreed to these
           </div>
         )}
 
+        {activeTab === 'languages' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', animation: 'modalSlideIn 0.2s ease', marginTop: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1rem' }}>Languages</h3>
+                <p style={{ margin: '0.25rem 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  Manage the languages an article can be published in. Visitors can filter the home page by language.
+                </p>
+              </div>
+              <button
+                onClick={openAddLanguage}
+                className="btn-primary"
+                style={{ width: 'auto', padding: '0.5rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem' }}
+              >
+                <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2z"/></svg>
+                New Language
+              </button>
+            </div>
+
+            {languageFormOpen && (
+              <div style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--accent-gold)', borderRadius: '8px', padding: '1.5rem', boxShadow: 'var(--card-shadow)' }}>
+                <h4 style={{ marginTop: 0, marginBottom: '1.25rem', color: 'var(--accent-gold)' }}>
+                  {editingLanguageId ? 'Edit Language' : 'New Language'}
+                </h4>
+                <form onSubmit={handleSaveLanguage}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label>Language Name *</label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        value={languageName}
+                        onChange={e => setLanguageName(e.target.value)}
+                        placeholder="e.g. English"
+                        required
+                        style={{ margin: 0 }}
+                      />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label>Code</label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        value={languageCode}
+                        onChange={e => setLanguageCode(e.target.value)}
+                        placeholder="e.g. en"
+                        style={{ margin: 0 }}
+                      />
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                    <button type="submit" className="btn-primary" style={{ width: 'auto' }} disabled={languageSaving}>
+                      {languageSaving ? 'Saving...' : (editingLanguageId ? 'Save Changes' : 'Add Language')}
+                    </button>
+                    <button type="button" className="btn-secondary" style={{ width: 'auto' }} onClick={() => setLanguageFormOpen(false)}>
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            <div style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '6px', boxShadow: 'var(--card-shadow)', overflow: 'hidden' }}>
+              <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>
+                  All Languages &nbsp;<span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>({languages.length})</span>
+                </span>
+                <button onClick={fetchLanguages} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.78rem' }}>
+                  Refresh
+                </button>
+              </div>
+              {languagesLoading ? (
+                <div style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>Loading...</div>
+              ) : languages.length === 0 ? (
+                <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <p>No languages yet. Click <strong>New Language</strong> to add the first one.</p>
+                </div>
+              ) : (
+                <div style={{ overflowX: 'auto' }}>
+                  <table className="admin-table" style={{ margin: 0, borderRadius: 0, border: 'none' }}>
+                    <thead style={{ backgroundColor: 'var(--bg-secondary)' }}>
+                      <tr>
+                        <th style={{ width: '44px', textAlign: 'center' }}>#</th>
+                        <th>Name</th>
+                        <th style={{ width: '120px' }}>Code</th>
+                        <th style={{ width: '110px', textAlign: 'right' }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {languages.map((item, idx) => (
+                        <tr key={item.id}>
+                          <td style={{ textAlign: 'center', color: 'var(--text-muted)', fontWeight: 600, fontSize: '0.8rem' }}>{idx + 1}</td>
+                          <td><div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{item.name}</div></td>
+                          <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{item.code || '—'}</td>
+                          <td style={{ textAlign: 'right' }}>
+                            <div className="action-buttons" style={{ justifyContent: 'flex-end' }}>
+                              <button onClick={() => openEditLanguage(item)} className="btn-action-edit" title="Edit">
+                                <svg width="13" height="13" fill="currentColor" viewBox="0 0 16 16">
+                                  <path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708l-3-3zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207l6.5-6.5z"/>
+                                </svg>
+                              </button>
+                              <button onClick={() => handleDeleteLanguage(item.id)} className="btn-action-delete" title="Delete">
+                                <svg width="13" height="13" fill="currentColor" viewBox="0 0 16 16">
+                                  <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                                  <path fillRule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                                </svg>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {activeTab === 'liveupdates' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', animation: 'modalSlideIn 0.2s ease', marginTop: '1rem' }}>
 
@@ -3657,6 +3898,27 @@ By using The One Journal, you acknowledge that you have read and agreed to these
                   </div>
                 </div>
 
+                {/* Language */}
+                <div className="form-group">
+                  <label htmlFor="form-language">Language</label>
+                  <select
+                    id="form-language"
+                    className="form-input"
+                    value={languageId}
+                    onChange={(e) => setLanguageId(e.target.value)}
+                  >
+                    <option value="">— None —</option>
+                    {languages.map((l) => (
+                      <option key={l.id} value={l.id}>{l.name}{l.code ? ` (${l.code})` : ''}</option>
+                    ))}
+                  </select>
+                  {languages.length === 0 && (
+                    <small style={{ color: 'var(--accent-color)', display: 'block', marginTop: '0.25rem' }}>
+                      No languages yet. Add some in the Languages tab.
+                    </small>
+                  )}
+                </div>
+
                 {/* Grid 2 Fields */}
                 <div className="form-grid-2">
                   <div className="form-group">
@@ -3693,6 +3955,15 @@ By using The One Journal, you acknowledge that you have read and agreed to these
                     <small style={{ color: 'var(--text-muted)', display: 'block', marginTop: '0.25rem' }}>
                       Upload a JPG, PNG, GIF or WEBP (max 5 MB), or paste an image URL.
                     </small>
+                    <input
+                      id="form-image-credit"
+                      type="text"
+                      className="form-input"
+                      value={imageCredit}
+                      onChange={(e) => setImageCredit(e.target.value)}
+                      placeholder="Photo credit (e.g. Reuters, AP, John Doe)"
+                      style={{ marginTop: '0.6rem' }}
+                    />
                   </div>
                 )}
 
