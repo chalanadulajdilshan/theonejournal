@@ -23,6 +23,7 @@ function mapRowToArticle($row) {
         'languageCode' => $row['language_code'] ?? null,
         'author' => $row['author'],
         'date' => $row['date'],
+        'createdAt' => $row['created_at'] ?? null,
         'readTime' => $row['read_time'],
         'isSponsored' => (bool)$row['is_sponsored'],
         'views' => intval($row['views_count'] ?? 0)
@@ -76,7 +77,7 @@ try {
         LEFT JOIN categories c ON a.category_id = c.id
         LEFT JOIN subcategories s ON a.subcategory_id = s.id
         LEFT JOIN languages l ON a.language_id = l.id
-        ORDER BY a.sort_order ASC, a.id DESC
+        ORDER BY a.created_at DESC, a.id DESC
     ");
     $dbArticles = $stmt->fetchAll();
 

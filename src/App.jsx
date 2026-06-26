@@ -361,8 +361,11 @@ export default function App() {
     return result.slice(0, 6);
   };
 
-  // Articles belonging to a given admin category (matched by id)
-  const articlesForCategory = (cat) => flatArticles.filter(a => a.categoryId === cat.id);
+  // Articles belonging to a given admin category (matched by id), newest id first.
+  const articlesForCategory = (cat) =>
+    flatArticles
+      .filter(a => a.categoryId === cat.id)
+      .sort((a, b) => Number(b.id) - Number(a.id));
 
   // Categories that get their own homepage "story" section. The special ones
   // The visibility tick only controls the navbar (header) & footer.

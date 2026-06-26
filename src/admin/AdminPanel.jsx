@@ -690,7 +690,9 @@ By using The One Journal, you acknowledge that you have read and agreed to these
   // top-viewed items inside the "You May Like" group, which would otherwise
   // show duplicate rows and break the category filter / counts.
   const allArticlesList = articles
-    ? Object.values(articles).flat().filter((a, i, arr) => arr.findIndex(x => x.id === a.id) === i)
+    ? Object.values(articles).flat()
+        .filter((a, i, arr) => arr.findIndex(x => x.id === a.id) === i)
+        .sort((a, b) => Number(b.id) - Number(a.id))
     : [];
 
   // Categorized breakdown stats
