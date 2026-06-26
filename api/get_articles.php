@@ -9,6 +9,7 @@ require_once __DIR__ . '/db.php';
 function mapRowToArticle($row) {
     $article = [
         'id' => $row['article_id'],
+        'rowId' => intval($row['id']),
         'title' => $row['title'],
         'excerpt' => $row['excerpt'],
         'content' => $row['content'],

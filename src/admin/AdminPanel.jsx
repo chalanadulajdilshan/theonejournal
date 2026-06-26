@@ -692,7 +692,9 @@ By using The One Journal, you acknowledge that you have read and agreed to these
   const allArticlesList = articles
     ? Object.values(articles).flat()
         .filter((a, i, arr) => arr.findIndex(x => x.id === a.id) === i)
-        .sort((a, b) => Number(b.id) - Number(a.id))
+        // `id` is an alphanumeric slug; sort by the DB's integer auto-increment
+        // `rowId` (highest = newest insertion) instead.
+        .sort((a, b) => Number(b.rowId || 0) - Number(a.rowId || 0))
     : [];
 
   // Categorized breakdown stats
