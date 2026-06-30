@@ -230,6 +230,7 @@ export default function ArticleDetailModal({ article, onClose }) {
                   { name: 'Facebook', href: `https://www.facebook.com/sharer/sharer.php?u=${shareUrl}&quote=${shareTitle}` },
                   { name: 'WhatsApp', href: `https://api.whatsapp.com/send?text=${shareTitle}%20${shareUrl}` },
                   { name: 'X', href: `https://twitter.com/intent/tweet?url=${shareUrl}&text=${shareTitle}` },
+                  { name: 'Telegram', href: `https://t.me/share/url?url=${shareUrl}&text=${shareTitle}` },
                 ];
                 return platforms.map((p) => (
                   <a
