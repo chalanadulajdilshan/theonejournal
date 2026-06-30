@@ -6,15 +6,47 @@ export default function MeetOurTeam({ layoutProps }) {
   const pageData = useDynamicPage('meet-our-team');
 
   if (pageData && pageData.content) {
+    var blocks = pageData.content.split('\n\n').map(function(b) { return b.trim(); }).filter(Boolean);
+    var members = [];
+    var closing = [];
+    blocks.forEach(function(block) {
+      var lines = block.split('\n').map(function(l) { return l.trim(); }).filter(Boolean);
+      var firstLine = lines[0] || '';
+      var dashIndex = firstLine.indexOf('—');
+      if (dashIndex !== -1) {
+        members.push({
+          name: firstLine.slice(0, dashIndex).trim(),
+          role: firstLine.slice(dashIndex + 1).trim(),
+          description: lines.slice(1).join(' ').trim()
+        });
+      } else {
+        closing.push(block);
+      }
+    });
+
     return (
       <Layout {...layoutProps}>
         <div className="container" style={{ padding: '3rem 1.5rem', maxWidth: '800px', margin: '0 auto' }}>
           <h1 style={{ marginBottom: '1.5rem', borderBottom: '2px solid var(--accent-gold)', paddingBottom: '0.5rem', display: 'inline-block' }}>
             {pageData.title || 'Meet Our Team'}
           </h1>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', lineHeight: '1.8' }}>
-            {pageData.content.split('\n\n').filter(function(p) { return p.trim(); }).map(function(p, i) { return <p key={i}>{p.trim()}</p>; })}
+          <div style={{ display: 'grid', gap: '2rem', marginTop: '1.5rem' }}>
+            {members.map(function(m, i) {
+              return (
+                <div key={i} style={{ padding: '1.5rem', backgroundColor: 'var(--bg-secondary)', borderRadius: 'var(--border-radius)' }}>
+                  <h3 style={{ color: 'var(--accent-gold)', marginBottom: '0.5rem' }}>{m.name}</h3>
+                  <p><strong>{m.role}</strong>{m.description ? <><br /><span style={{ color: 'var(--text-muted)' }}>{m.description}</span></> : null}</p>
+                </div>
+              );
+            })}
           </div>
+          {closing.map(function(c, i) {
+            return (
+              <p key={i} style={{ marginTop: '2.5rem', textAlign: 'center', fontStyle: 'italic', color: 'var(--text-muted)', fontSize: '1.1rem' }}>
+                {c}
+              </p>
+            );
+          })}
         </div>
       </Layout>
     );
