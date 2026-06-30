@@ -11,7 +11,8 @@
       "Bash(node -e \"const sharp=require\\('sharp'\\);sharp\\('public/logo.webp'\\).metadata\\(\\).then\\(m=>console.log\\(JSON.stringify\\(m\\)\\)\\)\")",
       "Bash(git -C \"d:/My Projects/theonejournal\" diff api/add_article.php)",
       "Bash(git -C \"d:/My Projects/theonejournal\" diff api/edit_article.php api/get_articles.php)",
-      "Bash(git -C \"d:/My Projects/theonejournal\" diff src/admin/AdminPanel.jsx)"
+      "Bash(git -C \"d:/My Projects/theonejournal\" diff src/admin/AdminPanel.jsx)",
+      "Bash(php api/optimize_uploads.php)"
     ]
   }
 }
