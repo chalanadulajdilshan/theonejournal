@@ -607,7 +607,7 @@ export default function App() {
                             onClick={() => handleLiveUpdateClick(latest)}
                           >
                             <div className="live-featured-img-wrapper">
-                              <img src={featuredImage} alt={latest.title} className="live-featured-img" />
+                              <img src={featuredImage} alt={latest.title} className="live-featured-img" loading="lazy" decoding="async" />
                               <span className="live-featured-badge">{liveTimeAgo(latest.created_ts ?? latest.created_at)}</span>
                               <span className="live-featured-tag">{latest.category || 'Breaking'}</span>
                             </div>

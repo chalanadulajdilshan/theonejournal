@@ -119,7 +119,7 @@ export default function ArticlePage({ layoutProps, article }) {
       ></iframe>
     </div>
   ) : article.image ? (
-    <img src={article.image} alt={article.title} className="article-page-img" />
+    <img src={article.image} alt={article.title} className="article-page-img" loading="eager" decoding="async" fetchPriority="high" />
   ) : null;
 
   return (

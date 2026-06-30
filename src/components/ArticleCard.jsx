@@ -12,6 +12,7 @@ export default function ArticleCard({ article, onClick }) {
           alt={article.title}
           className="card-img"
           loading="lazy"
+          decoding="async"
         />
         {article.tag && (
           <span className="card-tag">{article.tag}</span>

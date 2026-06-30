@@ -191,7 +191,7 @@ export default function ArticleDetailModal({ article, onClose }) {
             )}
           </div>
         ) : (
-          <img src={article.image} alt={article.title} className="modal-banner-img" />
+          <img src={article.image} alt={article.title} className="modal-banner-img" loading="eager" decoding="async" fetchPriority="high" />
         )}
 
         {/* Modal Info */}

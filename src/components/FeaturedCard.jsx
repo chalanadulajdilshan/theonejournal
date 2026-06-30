@@ -10,8 +10,9 @@ export default function FeaturedCard({ article, onClick }) {
         <img 
           src={article.image} 
           alt={article.title} 
-          className="featured-img" 
+          className="featured-img"
           loading="lazy"
+          decoding="async"
         />
       </div>
       <div className="featured-content">

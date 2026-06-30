@@ -12,6 +12,7 @@ function MediaCard({ article, onClick }) {
           alt={article.title} 
           className="media-thumbnail"
           loading="lazy"
+          decoding="async"
         />
         
         {/* Play Button Overlay */}

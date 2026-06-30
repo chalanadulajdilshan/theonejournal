@@ -2416,6 +2416,8 @@ By using The One Journal, you acknowledge that you have read and agreed to these
                               src={art.image}
                               alt={art.title}
                               className="table-article-img"
+                              loading="lazy"
+                              decoding="async"
                               onError={(e) => {
                                 e.target.src = 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=800&auto=format&fit=crop';
                               }}

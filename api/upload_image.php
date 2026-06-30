@@ -37,10 +37,10 @@ if (!isset($allowed[$mime])) {
     exit;
 }
 
-// Limit to 5 MB.
-if ($file['size'] > 5 * 1024 * 1024) {
+// Limit to 10 MB on the raw upload — we will compress it down below.
+if ($file['size'] > 10 * 1024 * 1024) {
     header('HTTP/1.1 400 Bad Request');
-    echo json_encode(['error' => 'Image must be 5 MB or smaller.']);
+    echo json_encode(['error' => 'Image must be 10 MB or smaller.']);
     exit;
 }
 
@@ -51,16 +51,61 @@ if (!is_dir($dir) && !mkdir($dir, 0775, true) && !is_dir($dir)) {
     exit;
 }
 
-$ext = $allowed[$mime];
-$name = 'img_' . date('Ymd_His') . '_' . bin2hex(random_bytes(5)) . '.' . $ext;
-$dest = $dir . '/' . $name;
+$base = 'img_' . date('Ymd_His') . '_' . bin2hex(random_bytes(5));
 
-if (!move_uploaded_file($file['tmp_name'], $dest)) {
-    header('HTTP/1.1 500 Internal Server Error');
-    echo json_encode(['error' => 'Failed to save the uploaded image.']);
-    exit;
+// Resize + convert to WebP when GD is available. Falls back to the raw file
+// when GD or WebP support is missing, so the upload still succeeds.
+$processed = false;
+$finalExt = $allowed[$mime];
+$finalName = $base . '.' . $finalExt;
+
+if (extension_loaded('gd') && function_exists('imagewebp') && $mime !== 'image/gif') {
+    $src = null;
+    switch ($mime) {
+        case 'image/jpeg': $src = @imagecreatefromjpeg($file['tmp_name']); break;
+        case 'image/png':  $src = @imagecreatefrompng($file['tmp_name']); break;
+        case 'image/webp': $src = @imagecreatefromwebp($file['tmp_name']); break;
+    }
+
+    if ($src) {
+        $maxDim = 1600;
+        $w = imagesx($src);
+        $h = imagesy($src);
+        $scale = min(1, $maxDim / max($w, $h));
+        $nw = max(1, (int) round($w * $scale));
+        $nh = max(1, (int) round($h * $scale));
+
+        if ($nw !== $w || $nh !== $h) {
+            $resized = imagecreatetruecolor($nw, $nh);
+            // Preserve transparency for PNG/WebP sources.
+            imagealphablending($resized, false);
+            imagesavealpha($resized, true);
+            $transparent = imagecolorallocatealpha($resized, 0, 0, 0, 127);
+            imagefilledrectangle($resized, 0, 0, $nw, $nh, $transparent);
+            imagecopyresampled($resized, $src, 0, 0, 0, 0, $nw, $nh, $w, $h);
+            imagedestroy($src);
+            $src = $resized;
+        }
+
+        $finalExt = 'webp';
+        $finalName = $base . '.webp';
+        $dest = $dir . '/' . $finalName;
+        if (imagewebp($src, $dest, 82)) {
+            $processed = true;
+        }
+        imagedestroy($src);
+    }
+}
+
+if (!$processed) {
+    $dest = $dir . '/' . $finalName;
+    if (!move_uploaded_file($file['tmp_name'], $dest)) {
+        header('HTTP/1.1 500 Internal Server Error');
+        echo json_encode(['error' => 'Failed to save the uploaded image.']);
+        exit;
+    }
 }
 
 // Served through the same /api path the rest of the app already uses.
-echo json_encode(['success' => true, 'url' => '/api/uploads/' . $name]);
+echo json_encode(['success' => true, 'url' => '/api/uploads/' . $finalName]);
 ?>
