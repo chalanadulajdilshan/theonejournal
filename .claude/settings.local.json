@@ -12,7 +12,12 @@
       "Bash(git -C \"d:/My Projects/theonejournal\" diff api/add_article.php)",
       "Bash(git -C \"d:/My Projects/theonejournal\" diff api/edit_article.php api/get_articles.php)",
       "Bash(git -C \"d:/My Projects/theonejournal\" diff src/admin/AdminPanel.jsx)",
-      "Bash(php api/optimize_uploads.php)"
+      "Bash(php api/optimize_uploads.php)",
+      "Bash(php -r \"echo 'PHP tz: ' . date_default_timezone_get\\(\\) . ' | PHP now: ' . date\\('Y-m-d H:i:s'\\) . PHP_EOL;\")",
+      "Bash(php -r \"date_default_timezone_set\\('Asia/Colombo'\\); echo 'PHP now \\(Colombo\\): ' . date\\('Y-m-d H:i:s'\\) . PHP_EOL; echo 'Test schedule 13:44 in future? ' . \\(strtotime\\('2026-07-02T13:44'\\) > time\\(\\) ? 'YES \\(hidden\\)' : 'NO \\(published\\)'\\) . PHP_EOL;\")",
+      "Bash(php -l api/db.php)",
+      "Bash(php -l share.php)",
+      "Bash(php -r ' *)"
     ]
   }
 }

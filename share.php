@@ -42,6 +42,8 @@ function share_fetch_article($id, $DB_HOST, $DB_NAME, $DB_USER, $DB_PASS) {
                 PDO::ATTR_EMULATE_PREPARES   => false,
             ]
         );
+        // Compare in UTC so scheduled articles stay hidden here too.
+        $pdo->exec("SET time_zone = '+00:00'");
         $stmt = $pdo->prepare(
             "SELECT title, excerpt, content, image, seo_title, meta_description
              FROM articles

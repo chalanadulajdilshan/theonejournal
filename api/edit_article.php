@@ -74,16 +74,17 @@ try {
         exit;
     }
 
-    // When a (re)schedule datetime is provided, keep the displayed date in sync with it.
-    if ($publishedAt !== false) {
-        $date = date('F d, Y', strtotime($publishedAt));
-    }
-
-    // Keep original date if not provided
+    // Resolve the display date. Prefer the value the client sent (it reflects the
+    // scheduler's local date). Fall back to the schedule datetime, then to the
+    // article's existing date.
     if (empty($date)) {
-        $stmtDate = $pdo->prepare("SELECT date FROM articles WHERE article_id = ?");
-        $stmtDate->execute([$articleId]);
-        $date = $stmtDate->fetchColumn();
+        if ($publishedAt !== false) {
+            $date = date('F d, Y', strtotime($publishedAt));
+        } else {
+            $stmtDate = $pdo->prepare("SELECT date FROM articles WHERE article_id = ?");
+            $stmtDate->execute([$articleId]);
+            $date = $stmtDate->fetchColumn();
+        }
     }
 
     // Auto-add language_id column on first run after deploy

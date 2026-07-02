@@ -33,12 +33,22 @@ const dateToDatetimeLocal = (d) => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
-// Parse a DB datetime ("YYYY-MM-DD HH:MM:SS") into a datetime-local input value.
+// Parse a stored UTC datetime into a Date. The API returns UTC wall-clock
+// strings ("YYYY-MM-DD HH:MM:SS" with no zone), so we mark them as UTC ('Z')
+// and let the browser render them in the viewer's own local timezone.
+const parseUtc = (value) => {
+  if (!value) return null;
+  const s = String(value).trim();
+  // Already has an explicit zone (e.g. ISO with Z or +05:30)? Trust it.
+  const iso = /[zZ]|[+-]\d{2}:?\d{2}$/.test(s) ? s : s.replace(' ', 'T') + 'Z';
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? null : d;
+};
+
+// Parse a stored UTC datetime into a datetime-local input value (viewer local).
 const toDatetimeLocal = (dbValue) => {
-  if (!dbValue) return '';
-  const d = new Date(dbValue.replace(' ', 'T'));
-  if (isNaN(d.getTime())) return '';
-  return dateToDatetimeLocal(d);
+  const d = parseUtc(dbValue);
+  return d ? dateToDatetimeLocal(d) : '';
 };
 
 // Default scheduler value: one hour from now, rounded to the minute.
@@ -48,15 +58,19 @@ const defaultScheduleValue = () => {
   return dateToDatetimeLocal(d);
 };
 
-// Human-readable label for a DB/ISO datetime, e.g. "Jul 5, 2026, 2:30 PM".
+// Human-readable label for a stored UTC datetime, shown in the viewer's local
+// timezone, e.g. "Jul 5, 2026, 2:30 PM".
 const formatScheduleLabel = (value) => {
-  if (!value) return '';
-  const d = new Date(String(value).replace(' ', 'T'));
-  if (isNaN(d.getTime())) return '';
+  const d = parseUtc(value);
+  if (!d) return '';
   return d.toLocaleString(undefined, {
     month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit'
   });
 };
+
+// Display date label ("July 05, 2026") for a Date, in the viewer's local time.
+const formatDisplayDate = (d) =>
+  d.toLocaleDateString('en-US', { month: 'long', day: '2-digit', year: 'numeric' });
 
 let ytApiPromise = null;
 const ensureYouTubeApi = () => {
@@ -848,11 +862,16 @@ By using The One Journal, you acknowledge that you have read and agreed to these
       return;
     }
 
-    // Resolve the publish time.
+    // Resolve the publish time as an absolute instant (UTC). The datetime-local
+    // input is the scheduler's own local wall-clock, so `new Date(...)` gives the
+    // correct absolute moment and `.toISOString()` sends it as UTC. This way a
+    // post scheduled for 2:40 PM in the USA fires at 2:40 PM USA time, and one
+    // scheduled from Sri Lanka fires at that Sri Lanka time — each in its own zone.
     //  - Schedule mode: requires a future datetime.
     //  - Otherwise "publish now". On edit we only reset the publish time when the
     //    article was previously scheduled — a normal edit must keep its original date.
     let publishedAt; // undefined = leave existing (edit only)
+    let displayDate; // "Month DD, YYYY" derived from the scheduler's local date
     if (scheduleMode) {
       if (!scheduledAt) {
         addToast('Please pick a date and time to schedule the article.', 'error');
@@ -867,13 +886,17 @@ By using The One Journal, you acknowledge that you have read and agreed to these
         addToast('Scheduled time must be in the future.', 'error');
         return;
       }
-      publishedAt = scheduledAt; // "YYYY-MM-DDTHH:MM" — strtotime() handles this
+      publishedAt = when.toISOString(); // absolute UTC instant
+      displayDate = formatDisplayDate(when);
     } else if (formMode !== 'edit' || editingArticle?.isScheduled) {
-      publishedAt = dateToDatetimeLocal(new Date()); // publish now
+      const now = new Date();
+      publishedAt = now.toISOString(); // publish now
+      displayDate = formatDisplayDate(now);
     }
 
     const payload = {
       ...(publishedAt !== undefined ? { publishedAt } : {}),
+      ...(displayDate !== undefined ? { date: displayDate } : {}),
       title,
       excerpt,
       content,
@@ -895,7 +918,10 @@ By using The One Journal, you acknowledge that you have read and agreed to these
 
     if (formMode === 'edit') {
       payload.id = editingArticle.id;
-      payload.date = editingArticle.date;
+      // Keep the original display date unless we just (re)set the publish time.
+      if (displayDate === undefined) {
+        payload.date = editingArticle.date;
+      }
     }
 
     const endpoint = formMode === 'edit' ? '/api/edit_article.php' : '/api/add_article.php';
