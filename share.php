@@ -44,7 +44,10 @@ function share_fetch_article($id, $DB_HOST, $DB_NAME, $DB_USER, $DB_PASS) {
         );
         $stmt = $pdo->prepare(
             "SELECT title, excerpt, content, image, seo_title, meta_description
-             FROM articles WHERE article_id = ? LIMIT 1"
+             FROM articles
+             WHERE article_id = ?
+               AND (published_at IS NULL OR published_at <= NOW())
+             LIMIT 1"
         );
         $stmt->execute([$id]);
         return $stmt->fetch() ?: null;

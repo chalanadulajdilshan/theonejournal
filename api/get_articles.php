@@ -5,6 +5,11 @@ header("Access-Control-Allow-Headers: *");
 header("Access-Control-Allow-Methods: *");
 
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/auth_helper.php';
+
+// Admins (logged in + ?admin=1) see every article, including future-scheduled
+// ones. The public site only ever sees articles whose publish time has arrived.
+$isAdminView = isset($_GET['admin']) && isAdminLoggedIn();
 
 function mapRowToArticle($row) {
     $article = [
@@ -24,6 +29,8 @@ function mapRowToArticle($row) {
         'languageCode' => $row['language_code'] ?? null,
         'author' => $row['author'],
         'date' => $row['date'],
+        'publishedAt' => $row['published_at'] ?? null,
+        'isScheduled' => isset($row['published_at']) && $row['published_at'] !== null && strtotime($row['published_at']) > time(),
         'createdAt' => $row['created_at'] ?? null,
         'readTime' => $row['read_time'],
         'isSponsored' => (bool)$row['is_sponsored'],
@@ -65,6 +72,19 @@ try {
             $pdo->exec("ALTER TABLE articles ADD COLUMN image_credit VARCHAR(255) NULL AFTER image");
         }
     } catch (\PDOException $e) { /* ignore */ }
+    try {
+        $hasPublishedAt = $pdo->query("SHOW COLUMNS FROM articles LIKE 'published_at'")->fetch();
+        if (!$hasPublishedAt) {
+            $pdo->exec("ALTER TABLE articles ADD COLUMN published_at DATETIME NULL AFTER date");
+        }
+    } catch (\PDOException $e) { /* ignore */ }
+
+    // Public visitors only see articles that have reached their publish time.
+    // Admins (admin view) see everything so they can manage scheduled posts.
+    // NULL published_at is treated as "already published" for legacy rows.
+    $scheduleFilter = $isAdminView
+        ? ""
+        : "WHERE (a.published_at IS NULL OR a.published_at <= NOW())";
 
     // 1. Fetch all articles joined with category, subcategory, and language tables
     $stmt = $pdo->query("
@@ -78,6 +98,7 @@ try {
         LEFT JOIN categories c ON a.category_id = c.id
         LEFT JOIN subcategories s ON a.subcategory_id = s.id
         LEFT JOIN languages l ON a.language_id = l.id
+        $scheduleFilter
         ORDER BY a.created_at DESC, a.id DESC
     ");
     $dbArticles = $stmt->fetchAll();
@@ -145,6 +166,7 @@ try {
         LEFT JOIN subcategories s ON a.subcategory_id = s.id
         LEFT JOIN languages l ON a.language_id = l.id
         WHERE a.views_count > 0
+          AND (a.published_at IS NULL OR a.published_at <= NOW())
         ORDER BY a.views_count DESC, a.last_clicked_at DESC
         LIMIT 5
     ");

@@ -33,6 +33,15 @@ $languageId = array_key_exists('languageId', $input)
     : false; // false = "not provided, leave existing"
 $author = trim($input['author'] ?? '');
 $date = trim($input['date'] ?? '');
+// Scheduling: publishedAt is an optional datetime. false = "not provided, leave existing".
+$publishedAtRaw = array_key_exists('publishedAt', $input) ? trim($input['publishedAt'] ?? '') : false;
+$publishedAt = false;
+if ($publishedAtRaw !== false && $publishedAtRaw !== '') {
+    $ts = strtotime($publishedAtRaw);
+    if ($ts !== false) {
+        $publishedAt = date('Y-m-d H:i:s', $ts);
+    }
+}
 $readTime = trim($input['readTime'] ?? '');
 $isSponsored = isset($input['isSponsored']) && $input['isSponsored'] ? 1 : 0;
 $mediaType = !empty($input['mediaType']) ? trim($input['mediaType']) : null;
@@ -65,6 +74,11 @@ try {
         exit;
     }
 
+    // When a (re)schedule datetime is provided, keep the displayed date in sync with it.
+    if ($publishedAt !== false) {
+        $date = date('F d, Y', strtotime($publishedAt));
+    }
+
     // Keep original date if not provided
     if (empty($date)) {
         $stmtDate = $pdo->prepare("SELECT date FROM articles WHERE article_id = ?");
@@ -82,9 +96,15 @@ try {
     if (!$hasImgCredit) {
         $pdo->exec("ALTER TABLE articles ADD COLUMN image_credit VARCHAR(255) NULL AFTER image");
     }
+    // Auto-add published_at column on first run after deploy (scheduling support)
+    $hasPublishedAt = $pdo->query("SHOW COLUMNS FROM articles LIKE 'published_at'")->fetch();
+    if (!$hasPublishedAt) {
+        $pdo->exec("ALTER TABLE articles ADD COLUMN published_at DATETIME NULL AFTER date");
+    }
 
     $setLanguage = $languageId !== false;
     $setImageCredit = $imageCredit !== false;
+    $setPublishedAt = $publishedAt !== false;
     $sql = "UPDATE articles SET
         title = ?,
         excerpt = ?,
@@ -95,8 +115,9 @@ try {
         subcategory_id = ?, "
         . ($setLanguage ? "language_id = ?, " : "") .
         "author = ?,
-        date = ?,
-        read_time = ?,
+        date = ?, "
+        . ($setPublishedAt ? "published_at = ?, " : "") .
+        "read_time = ?,
         is_sponsored = ?,
         media_type = ?,
         duration = ?,
@@ -115,9 +136,9 @@ try {
     if ($setImageCredit) $params[] = $imageCredit;
     array_push($params, $categoryId, $subcategoryId);
     if ($setLanguage) $params[] = $languageId;
+    array_push($params, $author, $date);
+    if ($setPublishedAt) $params[] = $publishedAt;
     array_push($params,
-        $author,
-        $date,
         $readTime ?: '3 min read',
         $isSponsored,
         $mediaType,
@@ -147,6 +168,8 @@ try {
             'languageId' => $languageId === false ? null : $languageId,
             'author' => $author,
             'date' => $date,
+            'publishedAt' => $publishedAt === false ? null : $publishedAt,
+            'isScheduled' => $publishedAt !== false && strtotime($publishedAt) > time(),
             'readTime' => $readTime ?: '3 min read',
             'isSponsored' => (bool)$isSponsored,
             'mediaType' => $mediaType,

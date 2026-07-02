@@ -25,6 +25,39 @@ const formatMMSS = (totalSeconds) => {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 };
 
+// ---- Scheduling datetime helpers -------------------------------------------
+// Convert a Date to the "YYYY-MM-DDTHH:MM" string a datetime-local input wants
+// (in local time, not UTC).
+const dateToDatetimeLocal = (d) => {
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
+// Parse a DB datetime ("YYYY-MM-DD HH:MM:SS") into a datetime-local input value.
+const toDatetimeLocal = (dbValue) => {
+  if (!dbValue) return '';
+  const d = new Date(dbValue.replace(' ', 'T'));
+  if (isNaN(d.getTime())) return '';
+  return dateToDatetimeLocal(d);
+};
+
+// Default scheduler value: one hour from now, rounded to the minute.
+const defaultScheduleValue = () => {
+  const d = new Date(Date.now() + 60 * 60 * 1000);
+  d.setSeconds(0, 0);
+  return dateToDatetimeLocal(d);
+};
+
+// Human-readable label for a DB/ISO datetime, e.g. "Jul 5, 2026, 2:30 PM".
+const formatScheduleLabel = (value) => {
+  if (!value) return '';
+  const d = new Date(String(value).replace(' ', 'T'));
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleString(undefined, {
+    month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit'
+  });
+};
+
 let ytApiPromise = null;
 const ensureYouTubeApi = () => {
   if (window.YT && window.YT.Player) return Promise.resolve();
@@ -249,6 +282,10 @@ export default function AdminPanel({ articles, onRefreshArticles, breakingNews, 
   const [author, setAuthor] = useState('');
   const [readTime, setReadTime] = useState('');
   const [isSponsored, setIsSponsored] = useState(false);
+  // Scheduling: when true, the article publishes at `scheduledAt` (datetime-local
+  // string) instead of immediately.
+  const [scheduleMode, setScheduleMode] = useState(false);
+  const [scheduledAt, setScheduledAt] = useState('');
   const [mediaType, setMediaType] = useState(''); // 'video' | 'podcast' | ''
   const [duration, setDuration] = useState('');
   const [mediaUrl, setMediaUrl] = useState('');
@@ -753,6 +790,8 @@ By using The One Journal, you acknowledge that you have read and agreed to these
     setMetaDescription('');
     setSeoTags('');
     setLanguageId(languages.length > 0 ? String(languages[0].id) : '');
+    setScheduleMode(false);
+    setScheduledAt(defaultScheduleValue());
     setIsFormOpen(true);
   };
 
@@ -779,6 +818,9 @@ By using The One Journal, you acknowledge that you have read and agreed to these
     setMetaDescription(art.metaDescription || '');
     setSeoTags(art.seoTags || '');
     setLanguageId(art.languageId ? String(art.languageId) : '');
+    // Pre-fill the scheduler if this article is (or was) scheduled for the future.
+    setScheduleMode(!!art.isScheduled);
+    setScheduledAt(art.isScheduled && art.publishedAt ? toDatetimeLocal(art.publishedAt) : defaultScheduleValue());
     setIsFormOpen(true);
   };
 
@@ -806,7 +848,32 @@ By using The One Journal, you acknowledge that you have read and agreed to these
       return;
     }
 
+    // Resolve the publish time.
+    //  - Schedule mode: requires a future datetime.
+    //  - Otherwise "publish now". On edit we only reset the publish time when the
+    //    article was previously scheduled — a normal edit must keep its original date.
+    let publishedAt; // undefined = leave existing (edit only)
+    if (scheduleMode) {
+      if (!scheduledAt) {
+        addToast('Please pick a date and time to schedule the article.', 'error');
+        return;
+      }
+      const when = new Date(scheduledAt);
+      if (isNaN(when.getTime())) {
+        addToast('The scheduled date and time is invalid.', 'error');
+        return;
+      }
+      if (when.getTime() <= Date.now()) {
+        addToast('Scheduled time must be in the future.', 'error');
+        return;
+      }
+      publishedAt = scheduledAt; // "YYYY-MM-DDTHH:MM" — strtotime() handles this
+    } else if (formMode !== 'edit' || editingArticle?.isScheduled) {
+      publishedAt = dateToDatetimeLocal(new Date()); // publish now
+    }
+
     const payload = {
+      ...(publishedAt !== undefined ? { publishedAt } : {}),
       title,
       excerpt,
       content,
@@ -2423,7 +2490,24 @@ By using The One Journal, you acknowledge that you have read and agreed to these
                               }}
                             />
                             <div>
-                              <div className="table-article-headline">{art.title}</div>
+                              <div className="table-article-headline">
+                                {art.title}
+                                {art.isScheduled && (
+                                  <span
+                                    className="admin-badge"
+                                    style={{
+                                      marginLeft: '0.5rem',
+                                      background: 'rgba(217, 119, 6, 0.15)',
+                                      color: '#b45309',
+                                      fontSize: '0.65rem',
+                                      verticalAlign: 'middle'
+                                    }}
+                                    title={`Scheduled for ${formatScheduleLabel(art.publishedAt)}`}
+                                  >
+                                    ⏱ Scheduled
+                                  </span>
+                                )}
+                              </div>
                               <span className="text-muted" style={{ fontSize: '0.75rem' }}>{art.readTime}</span>
                             </div>
                           </div>
@@ -2435,7 +2519,11 @@ By using The One Journal, you acknowledge that you have read and agreed to these
                           <span className="admin-badge badge-tag">{art.tag}</span>
                         </td>
                         <td style={{ fontWeight: 500 }}>{art.author}</td>
-                        <td style={{ color: 'var(--text-secondary)' }}>{art.date}</td>
+                        <td style={{ color: 'var(--text-secondary)' }}>
+                          {art.isScheduled
+                            ? <span style={{ color: '#b45309', fontWeight: 500 }}>⏱ {formatScheduleLabel(art.publishedAt)}</span>
+                            : art.date}
+                        </td>
                         <td style={{ textAlign: 'right' }}>
                           <div className="action-buttons" style={{ justifyContent: 'flex-end' }}>
                             <button
@@ -4170,11 +4258,57 @@ By using The One Journal, you acknowledge that you have read and agreed to these
                   </label>
                 </div>
 
+                {/* Publish scheduling */}
+                <div
+                  className="form-group"
+                  style={{
+                    marginTop: '0.5rem',
+                    padding: '1rem',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '6px',
+                    background: 'var(--bg-primary)'
+                  }}
+                >
+                  <label className="checkbox-group" style={{ marginBottom: scheduleMode ? '0.85rem' : 0 }}>
+                    <input
+                      type="checkbox"
+                      checked={scheduleMode}
+                      onChange={(e) => {
+                        setScheduleMode(e.target.checked);
+                        if (e.target.checked && !scheduledAt) setScheduledAt(defaultScheduleValue());
+                      }}
+                    />
+                    <span>Schedule for later (publish automatically at a set date &amp; time)</span>
+                  </label>
+
+                  {scheduleMode && (
+                    <>
+                      <label htmlFor="form-scheduled-at">Publish date &amp; time</label>
+                      <input
+                        id="form-scheduled-at"
+                        type="datetime-local"
+                        className="form-input"
+                        value={scheduledAt}
+                        min={dateToDatetimeLocal(new Date())}
+                        onChange={(e) => setScheduledAt(e.target.value)}
+                        style={{ maxWidth: '320px' }}
+                      />
+                      <small style={{ color: 'var(--text-muted)', display: 'block', marginTop: '0.4rem' }}>
+                        {scheduledAt
+                          ? `Goes live on ${formatScheduleLabel(scheduledAt)}. It stays hidden from the website until then.`
+                          : 'Pick when this article should go live. It stays hidden until then.'}
+                      </small>
+                    </>
+                  )}
+                </div>
+
               </div>
               <div className="modal-footer">
                 <button type="button" onClick={() => setIsFormOpen(false)} className="btn-secondary">Cancel</button>
                 <button type="submit" className="btn-primary" style={{ width: 'auto' }}>
-                  {formMode === 'edit' ? 'Save Changes' : 'Publish Article'}
+                  {formMode === 'edit'
+                    ? 'Save Changes'
+                    : (scheduleMode ? 'Schedule Article' : 'Publish Article')}
                 </button>
               </div>
             </form>

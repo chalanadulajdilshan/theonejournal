@@ -26,7 +26,7 @@ export default function AdminApp() {
 
   const fetchArticles = async () => {
     try {
-      const res = await fetch('/api/get_articles.php');
+      const res = await fetch('/api/get_articles.php?admin=1');
       if (res.ok) setArticles(await res.json());
     } catch (err) {
       console.error('Failed to fetch articles:', err);

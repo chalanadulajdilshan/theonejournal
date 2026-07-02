@@ -43,8 +43,21 @@ if (empty($title) || empty($excerpt) || empty($content) || empty($image) || empt
     exit;
 }
 
-// Format date to: Month DD, YYYY (e.g. June 13, 2026)
-$date = !empty($input['date']) ? trim($input['date']) : date("F d, Y");
+// Scheduling: publishedAt is an optional datetime (e.g. "2026-07-05T14:30").
+// When omitted or in the past, the article publishes immediately (NOW()).
+// When in the future, the article stays hidden on the public site until then.
+$publishedAtRaw = !empty($input['publishedAt']) ? trim($input['publishedAt']) : null;
+$publishedAt = date('Y-m-d H:i:s'); // default: now
+if ($publishedAtRaw) {
+    $ts = strtotime($publishedAtRaw);
+    if ($ts !== false) {
+        $publishedAt = date('Y-m-d H:i:s', $ts);
+    }
+}
+
+// Format date to: Month DD, YYYY (e.g. June 13, 2026) — derived from the
+// publish date so a scheduled article shows its future date once it goes live.
+$date = !empty($input['date']) ? trim($input['date']) : date('F d, Y', strtotime($publishedAt));
 
 // Generate unique article ID
 $articleId = uniqid('art-');
@@ -60,10 +73,15 @@ try {
     if (!$hasImgCredit) {
         $pdo->exec("ALTER TABLE articles ADD COLUMN image_credit VARCHAR(255) NULL AFTER image");
     }
+    // Auto-add published_at column on first run after deploy (scheduling support)
+    $hasPublishedAt = $pdo->query("SHOW COLUMNS FROM articles LIKE 'published_at'")->fetch();
+    if (!$hasPublishedAt) {
+        $pdo->exec("ALTER TABLE articles ADD COLUMN published_at DATETIME NULL AFTER date");
+    }
 
     $stmt = $pdo->prepare("INSERT INTO articles
-        (article_id, title, excerpt, content, image, image_credit, category_id, subcategory_id, language_id, author, date, read_time, is_sponsored, media_type, duration, media_url, seo_title, meta_description, seo_tags)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        (article_id, title, excerpt, content, image, image_credit, category_id, subcategory_id, language_id, author, date, published_at, read_time, is_sponsored, media_type, duration, media_url, seo_title, meta_description, seo_tags)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
     $stmt->execute([
         $articleId,
@@ -77,6 +95,7 @@ try {
         $languageId,
         $author,
         $date,
+        $publishedAt,
         $readTime ?: '3 min read',
         $isSponsored,
         $mediaType,
@@ -102,6 +121,8 @@ try {
             'languageId' => $languageId,
             'author' => $author,
             'date' => $date,
+            'publishedAt' => $publishedAt,
+            'isScheduled' => strtotime($publishedAt) > time(),
             'readTime' => $readTime ?: '3 min read',
             'isSponsored' => (bool)$isSponsored,
             'mediaType' => $mediaType,
