@@ -464,13 +464,13 @@ export default function App() {
     };
     const cat = categories.find(c => c.slug === (aliasMap[catSlug] || catSlug));
     let list = cat ? articlesForCategory(cat) : [];
-    let title = cat ? cat.name : 'Category';
+    let title = cat ? localized(cat) : 'Category';
 
     if (subSlug && cat) {
       const sub = (cat.subcategories || []).find(s => s.slug === subSlug);
       if (sub) {
         list = list.filter(a => a.subcategoryId === sub.id || (a.tag || '').toLowerCase() === sub.name.toLowerCase());
-        title = `${cat.name} — ${sub.name}`;
+        title = `${localized(cat)} — ${localized(sub)}`;
       }
     }
 
