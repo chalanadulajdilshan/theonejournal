@@ -534,6 +534,23 @@ export default function App() {
           /* Main Homepage Sections Layout */
           <div className="main-layout">
 
+            {/* SEO: primary H1 for the homepage (visually hidden, read by search engines & screen readers) */}
+            <h1
+              style={{
+                position: 'absolute',
+                width: '1px',
+                height: '1px',
+                padding: 0,
+                margin: '-1px',
+                overflow: 'hidden',
+                clip: 'rect(0, 0, 0, 0)',
+                whiteSpace: 'nowrap',
+                border: 0,
+              }}
+            >
+              {t('home.pageHeading')}
+            </h1>
+
             {/* Language filter (only shown if admin has defined languages) */}
             {false && languages.length > 0 && (
               <div className="language-filter-bar" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '0.6rem', margin: '0.5rem 0 1rem' }}>

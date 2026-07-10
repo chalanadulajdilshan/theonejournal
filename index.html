@@ -20,7 +20,11 @@
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,300&display=swap"></noscript>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Static H1 for crawlers that don't execute JavaScript (e.g. SEO auditors).
+           React replaces the entire contents of #root on mount, so real users never see this. -->
+      <h1>The One Journal — Gulf, World, Business, Tech &amp; Lifestyle News</h1>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

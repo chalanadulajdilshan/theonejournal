@@ -62,6 +62,7 @@ const STRINGS = {
 
     'ticker.breakingNews': 'Breaking News',
 
+    'home.pageHeading': 'The One Journal — Gulf, World, Business, Tech & Lifestyle News',
     'home.language': 'Language:',
     'home.trending': 'Trending',
     'home.viewAll': 'View All',
@@ -106,6 +107,7 @@ const STRINGS = {
 
     'ticker.breakingNews': 'أخبار عاجلة',
 
+    'home.pageHeading': 'ذا ون جورنال — أخبار الخليج والعالم والأعمال والتقنية ونمط الحياة',
     'home.language': 'اللغة:',
     'home.trending': 'الأكثر رواجاً',
     'home.viewAll': 'عرض الكل',
@@ -150,6 +152,7 @@ const STRINGS = {
 
     'ticker.breakingNews': 'හදිසි පුවත්',
 
+    'home.pageHeading': 'ද වන් ජර්නල් — ගල්ෆ්, ලෝක, ව්‍යාපාර, තාක්‍ෂණ සහ ජීවන රටා පුවත්',
     'home.language': 'භාෂාව:',
     'home.trending': 'ප්‍රවණතාවය',
     'home.viewAll': 'සියල්ල බලන්න',
@@ -194,6 +197,7 @@ const STRINGS = {
 
     'ticker.breakingNews': 'முக்கிய செய்திகள்',
 
+    'home.pageHeading': 'தி ஒன் ஜர்னல் — வளைகுடா, உலகம், வணிகம், தொழில்நுட்பம் மற்றும் வாழ்க்கைமுறை செய்திகள்',
     'home.language': 'மொழி:',
     'home.trending': 'டிரெண்டிங்',
     'home.viewAll': 'அனைத்தையும் காண்க',
