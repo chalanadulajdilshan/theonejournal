@@ -535,7 +535,7 @@ export default function App() {
           <div className="main-layout">
 
             {/* Language filter (only shown if admin has defined languages) */}
-            {languages.length > 0 && (
+            {false && languages.length > 0 && (
               <div className="language-filter-bar" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '0.6rem', margin: '0.5rem 0 1rem' }}>
                 <h2 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, letterSpacing: '0.04em', color: 'var(--text-primary)' }}>
                   {t('home.language')}
