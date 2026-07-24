@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 
 // Styles
 import './App.css';
@@ -9,29 +9,37 @@ import FeaturedCard from './components/FeaturedCard';
 import ArticleCard from './components/ArticleCard';
 import ViewsBadge from './components/ViewsBadge';
 import MediaSection from './components/MediaSection';
-import ArticlePage from './pages/ArticlePage';
 import CustomCursor from './components/CustomCursor';
 import Layout from './components/Layout';
 import { useI18n } from './i18n/I18nContext';
 import { resolveLocale } from './i18n/translations';
 
-// Pages
-import AboutUs from './pages/AboutUs';
-import Advertise from './pages/Advertise';
-import Careers from './pages/Careers';
-import ContactUs from './pages/ContactUs';
-import Disclaimer from './pages/Disclaimer';
-import MeetOurTeam from './pages/MeetOurTeam';
-import PrivacyPolicy from './pages/PrivacyPolicy';
-import TermsAndConditions from './pages/TermsAndConditions';
-import CategoryPage from './pages/CategoryPage';
-import LiveUpdates from './pages/LiveUpdates';
-import AddOnService from './pages/AddOnService';
-import RatesPricing from './pages/RatesPricing';
-import DisplayBanner from './pages/DisplayBanner';
-import PartnerContent from './pages/PartnerContent';
-import SocialMedia from './pages/SocialMedia';
-import Jobs from './pages/Jobs';
+// Pages — lazy-loaded so the homepage bundle stays small. Each of these only
+// downloads when the visitor actually navigates to it (its own hash route),
+// instead of being bundled into the initial page load.
+const ArticlePage = lazy(() => import('./pages/ArticlePage'));
+const CategoryPage = lazy(() => import('./pages/CategoryPage'));
+const AboutUs = lazy(() => import('./pages/AboutUs'));
+const Advertise = lazy(() => import('./pages/Advertise'));
+const Careers = lazy(() => import('./pages/Careers'));
+const ContactUs = lazy(() => import('./pages/ContactUs'));
+const Disclaimer = lazy(() => import('./pages/Disclaimer'));
+const MeetOurTeam = lazy(() => import('./pages/MeetOurTeam'));
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
+const TermsAndConditions = lazy(() => import('./pages/TermsAndConditions'));
+const LiveUpdates = lazy(() => import('./pages/LiveUpdates'));
+const AddOnService = lazy(() => import('./pages/AddOnService'));
+const RatesPricing = lazy(() => import('./pages/RatesPricing'));
+const DisplayBanner = lazy(() => import('./pages/DisplayBanner'));
+const PartnerContent = lazy(() => import('./pages/PartnerContent'));
+const SocialMedia = lazy(() => import('./pages/SocialMedia'));
+const Jobs = lazy(() => import('./pages/Jobs'));
+
+// Lightweight wrapper so lazy pages have a Suspense boundary while their chunk
+// downloads. The fallback is intentionally minimal — the chunks are tiny.
+const withSuspense = (node) => (
+  <Suspense fallback={<div style={{ minHeight: '100vh' }} />}>{node}</Suspense>
+);
 
 // Module-level guard so a single page load only registers one site view,
 // even though React StrictMode invokes mount effects twice in development.
@@ -393,21 +401,21 @@ export default function App() {
 
   // Render Static Pages
   switch (currentHash) {
-    case '#about-us': return <AboutUs layoutProps={layoutProps} />;
-    case '#advertise': return <Advertise layoutProps={layoutProps} />;
-    case '#careers': return <Careers layoutProps={layoutProps} />;
-    case '#contact-us': return <ContactUs layoutProps={layoutProps} />;
-    case '#disclaimer': return <Disclaimer layoutProps={layoutProps} />;
-    case '#meet-our-team': return <MeetOurTeam layoutProps={layoutProps} />;
-    case '#privacy-policy': return <PrivacyPolicy layoutProps={layoutProps} />;
-    case '#terms-and-conditions': return <TermsAndConditions layoutProps={layoutProps} />;
-    case '#live-updates': return <LiveUpdates layoutProps={layoutProps} />;
-    case '#add-on-service': return <AddOnService layoutProps={layoutProps} />;
-    case '#rates-pricing': return <RatesPricing layoutProps={layoutProps} />;
-    case '#display-banner': return <DisplayBanner layoutProps={layoutProps} />;
-    case '#partner-content': return <PartnerContent layoutProps={layoutProps} />;
-    case '#social-media': return <SocialMedia layoutProps={layoutProps} />;
-    case '#jobs': return <Jobs layoutProps={layoutProps} />;
+    case '#about-us': return withSuspense(<AboutUs layoutProps={layoutProps} />);
+    case '#advertise': return withSuspense(<Advertise layoutProps={layoutProps} />);
+    case '#careers': return withSuspense(<Careers layoutProps={layoutProps} />);
+    case '#contact-us': return withSuspense(<ContactUs layoutProps={layoutProps} />);
+    case '#disclaimer': return withSuspense(<Disclaimer layoutProps={layoutProps} />);
+    case '#meet-our-team': return withSuspense(<MeetOurTeam layoutProps={layoutProps} />);
+    case '#privacy-policy': return withSuspense(<PrivacyPolicy layoutProps={layoutProps} />);
+    case '#terms-and-conditions': return withSuspense(<TermsAndConditions layoutProps={layoutProps} />);
+    case '#live-updates': return withSuspense(<LiveUpdates layoutProps={layoutProps} />);
+    case '#add-on-service': return withSuspense(<AddOnService layoutProps={layoutProps} />);
+    case '#rates-pricing': return withSuspense(<RatesPricing layoutProps={layoutProps} />);
+    case '#display-banner': return withSuspense(<DisplayBanner layoutProps={layoutProps} />);
+    case '#partner-content': return withSuspense(<PartnerContent layoutProps={layoutProps} />);
+    case '#social-media': return withSuspense(<SocialMedia layoutProps={layoutProps} />);
+    case '#jobs': return withSuspense(<Jobs layoutProps={layoutProps} />);
 
     default: break; // Continue to main app view if no route matched
   }
@@ -449,7 +457,7 @@ export default function App() {
         : [];
       art = allArticles.find(a => String(a.id) === id);
     }
-    return <ArticlePage layoutProps={{ ...layoutProps, activeCategory: art?.category }} article={art} />;
+    return withSuspense(<ArticlePage layoutProps={{ ...layoutProps, activeCategory: art?.category }} article={art} />);
   }
 
   // Dynamic category page: #category-<slug> shows a category; an optional
@@ -474,7 +482,7 @@ export default function App() {
       }
     }
 
-    return (
+    return withSuspense(
       <CategoryPage
         layoutProps={{ ...layoutProps, activeCategory: cat ? cat.name : null }}
         title={title}

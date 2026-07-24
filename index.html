@@ -21,9 +21,25 @@
   </head>
   <body>
     <div id="root">
-      <!-- Static H1 for crawlers that don't execute JavaScript (e.g. SEO auditors).
-           React replaces the entire contents of #root on mount, so real users never see this. -->
+      <!-- Static H1 + navigation for crawlers that don't execute JavaScript
+           (e.g. SEO auditors). React replaces the entire contents of #root on
+           mount, so real users never see this. The links give crawlers real
+           internal links so the homepage isn't flagged as a dead-end entry page. -->
       <h1>The One Journal — Gulf, World, Business, Tech &amp; Lifestyle News</h1>
+      <nav aria-label="Main sections">
+        <ul>
+          <li><a href="/#home">Home</a></li>
+          <li><a href="/#live-updates">Live Updates</a></li>
+          <li><a href="/#about-us">About Us</a></li>
+          <li><a href="/#meet-our-team">Meet Our Team</a></li>
+          <li><a href="/#careers">Careers</a></li>
+          <li><a href="/#advertise">Advertise</a></li>
+          <li><a href="/#contact-us">Contact Us</a></li>
+          <li><a href="/#privacy-policy">Privacy Policy</a></li>
+          <li><a href="/#terms-and-conditions">Terms &amp; Conditions</a></li>
+          <li><a href="/#disclaimer">Disclaimer</a></li>
+        </ul>
+      </nav>
     </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
